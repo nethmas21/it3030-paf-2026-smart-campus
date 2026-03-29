@@ -1,16 +1,5 @@
-package controller;
+package com.example.demo.controller;
 
-import dto.request.AddCommentRequest;
-import dto.request.AssignTechnicianRequest;
-import dto.request.CreateTicketRequest;
-import dto.request.UpdateTicketStatusRequest;
-import dto.response.ApiResponse;
-import dto.response.CommentResponse;
-import dto.response.TicketResponse;
-import enums.TicketCategory;
-import enums.TicketPriority;
-import enums.TicketStatus;
-import service.TicketService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +13,18 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.example.demo.dto.request.AddCommentRequest;
+import com.example.demo.dto.request.AssignTechnicianRequest;
+import com.example.demo.dto.request.CreateTicketRequest;
+import com.example.demo.dto.request.UpdateTicketStatusRequest;
+import com.example.demo.dto.response.ApiResponse;
+import com.example.demo.dto.response.CommentResponse;
+import com.example.demo.dto.response.TicketResponse;
+import com.example.demo.enums.TicketCategory;
+import com.example.demo.enums.TicketPriority;
+import com.example.demo.enums.TicketStatus;
+import com.example.demo.service.TicketService;
 
 import java.util.List;
 

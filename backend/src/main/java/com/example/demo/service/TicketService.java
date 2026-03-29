@@ -1,26 +1,27 @@
-package service;
+package com.example.demo.service;
 
-import dto.request.AddCommentRequest;
-import dto.request.AssignTechnicianRequest;
-import dto.request.CreateTicketRequest;
-import dto.request.UpdateTicketStatusRequest;
-import dto.response.CommentResponse;
-import dto.response.TicketResponse;
-import entity.Ticket;
-import entity.TicketComment;
-import enums.TicketCategory;
-import enums.TicketPriority;
-import enums.TicketStatus;
-import exception.BadRequestException;
-import exception.ResourceNotFoundException;
-import repository.TicketCommentRepository;
-import repository.TicketRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.example.demo.dto.request.AddCommentRequest;
+import com.example.demo.dto.request.AssignTechnicianRequest;
+import com.example.demo.dto.request.CreateTicketRequest;
+import com.example.demo.dto.request.UpdateTicketStatusRequest;
+import com.example.demo.dto.response.CommentResponse;
+import com.example.demo.dto.response.TicketResponse;
+import com.example.demo.entity.Ticket;
+import com.example.demo.entity.TicketComment;
+import com.example.demo.enums.TicketCategory;
+import com.example.demo.enums.TicketPriority;
+import com.example.demo.enums.TicketStatus;
+import com.example.demo.exception.BadRequestException;
+import com.example.demo.exception.ResourceNotFoundException;
+import com.example.demo.repository.TicketCommentRepository;
+import com.example.demo.repository.TicketRepository;
 
 import java.io.IOException;
 import java.nio.file.Files;

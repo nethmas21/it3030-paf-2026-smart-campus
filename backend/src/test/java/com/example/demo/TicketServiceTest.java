@@ -1,17 +1,17 @@
-package com.smartcampus;
+package com.example.demo;
 
-import com.smartcampus.dto.request.CreateTicketRequest;
-import com.smartcampus.dto.request.UpdateTicketStatusRequest;
-import com.smartcampus.dto.response.TicketResponse;
-import com.smartcampus.entity.Ticket;
-import com.smartcampus.enums.TicketCategory;
-import com.smartcampus.enums.TicketPriority;
-import com.smartcampus.enums.TicketStatus;
-import com.smartcampus.exception.BadRequestException;
-import com.smartcampus.exception.ResourceNotFoundException;
-import com.smartcampus.repository.TicketCommentRepository;
-import com.smartcampus.repository.TicketRepository;
-import com.smartcampus.service.TicketService;
+import com.example.demo.dto.request.CreateTicketRequest;
+import com.example.demo.dto.request.UpdateTicketStatusRequest;
+import com.example.demo.dto.response.TicketResponse;
+import com.example.demo.entity.Ticket;
+import com.example.demo.enums.TicketCategory;
+import com.example.demo.enums.TicketPriority;
+import com.example.demo.enums.TicketStatus;
+import com.example.demo.exception.BadRequestException;
+import com.example.demo.exception.ResourceNotFoundException;
+import com.example.demo.repository.TicketCommentRepository;
+import com.example.demo.repository.TicketRepository;
+import com.example.demo.service.TicketService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,9 +20,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
-
 import java.util.ArrayList;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -89,7 +88,7 @@ class TicketServiceTest {
     }
 
     @Test
-    @DisplayName("updateStatus — valid OPEN → IN_PROGRESS transition should succeed")
+    @DisplayName("updateStatus — valid OPEN to IN_PROGRESS transition should succeed")
     void updateStatus_validTransition_shouldSucceed() {
         when(ticketRepository.findById(1L)).thenReturn(Optional.of(sampleTicket));
         when(ticketRepository.save(any())).thenReturn(sampleTicket);
@@ -103,7 +102,7 @@ class TicketServiceTest {
     }
 
     @Test
-    @DisplayName("updateStatus — invalid CLOSED → OPEN transition should throw")
+    @DisplayName("updateStatus — invalid CLOSED to OPEN transition should throw")
     void updateStatus_invalidTransition_shouldThrow() {
         sampleTicket.setStatus(TicketStatus.CLOSED);
         when(ticketRepository.findById(1L)).thenReturn(Optional.of(sampleTicket));

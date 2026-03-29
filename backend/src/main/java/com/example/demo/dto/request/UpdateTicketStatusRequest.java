@@ -1,7 +1,8 @@
 
-package dto.request;
+package com.example.demo.dto.request;
 
-import enums.TicketStatus;
+import com.example.demo.enums.TicketStatus;
+
 import jakarta.validation.constraints.NotNull;
 
 public class UpdateTicketStatusRequest {

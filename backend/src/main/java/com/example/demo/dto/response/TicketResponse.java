@@ -1,13 +1,13 @@
-package dto.response;
+package com.example.demo.dto.response;
 
 
-
-import enums.TicketCategory;
-import enums.TicketPriority;
-import enums.TicketStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import com.example.demo.enums.TicketCategory;
+import com.example.demo.enums.TicketPriority;
+import com.example.demo.enums.TicketStatus;
 
 public class TicketResponse {
 
