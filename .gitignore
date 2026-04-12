@@ -19,5 +19,9 @@ dist/
 
 # OS
 .DS_Store
+<<<<<<< HEAD
 Thumbs.db
 
+=======
+Thumbs.db
+>>>>>>> f74bf82 (chore: add root gitignore to protect credentials)
