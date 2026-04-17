@@ -3,7 +3,9 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import TicketListPage   from './pages/tickets/TicketListPage';
 import TicketDetailPage from './pages/tickets/TicketDetailPage';
 import CreateTicketPage from './pages/tickets/CreateTicketPage';
-
+import ResourceListPage from './pages/resources/ResourceListPage';
+import ResourceDetailPage from './pages/resources/ResourceDetailPage';
+import AdminResourcePage from './pages/resources/AdminResourcePage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -68,6 +70,9 @@ export default function App() {
                   <Route path="/tickets"         element={<TicketListPage />} />
                   <Route path="/tickets/new"     element={<CreateTicketPage />} />
                   <Route path="/tickets/:id"     element={<TicketDetailPage />} />
+                  <Route path="/resources" element={<ResourceListPage />} />
+                  <Route path="/resources/:id" element={<ResourceDetailPage />} />
+                  <Route path="/admin/resources" element={<AdminResourcePage />} />
                 </Routes>
               </AppLayout>
             </ProtectedRoute>
