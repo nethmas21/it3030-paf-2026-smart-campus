@@ -30,7 +30,7 @@ public class SecurityConfig {
                 .anyRequest().permitAll()
             )
             .oauth2Login(oauth2 -> oauth2
-                .defaultSuccessUrl("http://localhost:3000/tickets", true)
+                .defaultSuccessUrl("http://localhost:3000/dashboard", true)
                 .failureUrl("http://localhost:3000/login?error=true")
             )
             .logout(logout -> logout

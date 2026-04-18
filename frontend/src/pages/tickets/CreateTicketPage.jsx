@@ -2,8 +2,36 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createTicket, uploadAttachments } from '../../api/ticketApi';
 
-const CATEGORIES = ['ELECTRICAL','PLUMBING','HVAC','IT_EQUIPMENT','FURNITURE','SECURITY','CLEANING','STRUCTURAL','OTHER'];
-const PRIORITIES  = ['LOW','MEDIUM','HIGH','CRITICAL'];
+const CATEGORIES = [
+  // Academic
+  { value: 'EXAM_ISSUE',       label: '📝 Exam Issue',         group: 'Academic' },
+  { value: 'GRADE_ISSUE',      label: '📊 Grade Issue',        group: 'Academic' },
+  { value: 'LECTURE_ISSUE',    label: '👨‍🏫 Lecture Issue',      group: 'Academic' },
+  { value: 'TIMETABLE_ISSUE',  label: '🗓️ Timetable Issue',    group: 'Academic' },
+  { value: 'MODULE_ISSUE',     label: '📚 Module Issue',       group: 'Academic' },
+  { value: 'ASSIGNMENT_ISSUE', label: '📄 Assignment Issue',   group: 'Academic' },
+  // Administrative
+  { value: 'REGISTRATION',     label: '📋 Registration',       group: 'Administrative' },
+  { value: 'STUDENT_RECORD',   label: '🪪 Student Record',     group: 'Administrative' },
+  { value: 'FEE_PAYMENT',      label: '💳 Fee & Payment',      group: 'Administrative' },
+  // IT & Facilities
+  { value: 'IT_EQUIPMENT',     label: '💻 IT Equipment',       group: 'Facilities' },
+  { value: 'NETWORK',          label: '📶 Network / WiFi',     group: 'Facilities' },
+  { value: 'ELECTRICAL',       label: '⚡ Electrical',         group: 'Facilities' },
+  { value: 'PLUMBING',         label: '🚰 Plumbing',           group: 'Facilities' },
+  { value: 'HVAC',             label: '❄️ AC / Heating',       group: 'Facilities' },
+  { value: 'CLASSROOM',        label: '🏫 Classroom',          group: 'Facilities' },
+  { value: 'LABORATORY',       label: '🔬 Laboratory',         group: 'Facilities' },
+  { value: 'LIBRARY',          label: '📖 Library',            group: 'Facilities' },
+  { value: 'SECURITY',         label: '🔒 Security',           group: 'Facilities' },
+  { value: 'CLEANING',         label: '🧹 Cleaning',           group: 'Facilities' },
+  { value: 'OTHER',            label: '❓ Other',              group: 'Other' },
+];
+
+const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+
+// Group categories for dropdown
+const GROUPS = [...new Set(CATEGORIES.map(c => c.group))];
 
 export default function CreateTicketPage() {
   const navigate = useNavigate();
@@ -11,8 +39,8 @@ export default function CreateTicketPage() {
     title: '', description: '', category: '', priority: '',
     location: '', preferredContact: '', resourceId: '',
   });
-  const [files, setFiles]       = useState([]);
-  const [errors, setErrors]     = useState({});
+  const [files, setFiles]           = useState([]);
+  const [errors, setErrors]         = useState({});
   const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
@@ -59,7 +87,6 @@ export default function CreateTicketPage() {
       const res = await createTicket(payload);
       const createdId = res.data.data.id;
 
-      // Upload attachments if any
       if (files.length > 0) {
         await uploadAttachments(createdId, files);
       }
@@ -75,9 +102,9 @@ export default function CreateTicketPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Report an Incident</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Report an Issue</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Describe the issue and we'll assign a technician as soon as possible.
+          Submit your concern and we'll get back to you as soon as possible.
         </p>
       </div>
 
@@ -99,7 +126,7 @@ export default function CreateTicketPage() {
             type="text"
             value={form.title}
             onChange={handleChange}
-            placeholder="e.g. Projector not working in Lab A"
+            placeholder="e.g. Wrong grade for IT3040 final exam"
             className={`w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${errors.title ? 'border-red-400' : 'border-gray-300'}`}
           />
           {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
@@ -115,7 +142,7 @@ export default function CreateTicketPage() {
             rows={4}
             value={form.description}
             onChange={handleChange}
-            placeholder="Describe the issue in detail..."
+            placeholder="Describe your issue in detail..."
             className={`w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none ${errors.description ? 'border-red-400' : 'border-gray-300'}`}
           />
           {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
@@ -134,8 +161,12 @@ export default function CreateTicketPage() {
               className={`w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white ${errors.category ? 'border-red-400' : 'border-gray-300'}`}
             >
               <option value="">Select category</option>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c.replace('_', ' ')}</option>
+              {GROUPS.map(group => (
+                <optgroup key={group} label={group}>
+                  {CATEGORIES.filter(c => c.group === group).map(c => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </optgroup>
               ))}
             </select>
             {errors.category && <p className="text-xs text-red-500 mt-1">{errors.category}</p>}

@@ -6,18 +6,33 @@ import TicketStatusBadge from '../../components/tickets/TicketStatusBadge';
 import PriorityBadge from '../../components/tickets/PriorityBadge';
 
 const STATUSES   = ['OPEN','IN_PROGRESS','RESOLVED','CLOSED','REJECTED'];
-const CATEGORIES = ['ELECTRICAL','PLUMBING','HVAC','IT_EQUIPMENT','FURNITURE','SECURITY','CLEANING','STRUCTURAL','OTHER'];
+const CATEGORIES = [
+  'EXAM_ISSUE','GRADE_ISSUE','LECTURE_ISSUE','TIMETABLE_ISSUE','MODULE_ISSUE','ASSIGNMENT_ISSUE',
+  'REGISTRATION','STUDENT_RECORD','FEE_PAYMENT',
+  'IT_EQUIPMENT','NETWORK','ELECTRICAL','PLUMBING','HVAC','CLASSROOM','LABORATORY','LIBRARY','SECURITY','CLEANING',
+  'OTHER'
+];
 const PRIORITIES = ['LOW','MEDIUM','HIGH','CRITICAL'];
+
+const STATS_CONFIG = [
+  { label: 'Open',        status: 'OPEN',        color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { label: 'In Progress', status: 'IN_PROGRESS',  color: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
+  { label: 'Resolved',    status: 'RESOLVED',     color: 'bg-green-50 text-green-700 border-green-200' },
+  { label: 'Closed',      status: 'CLOSED',       color: 'bg-gray-50 text-gray-600 border-gray-200' },
+  { label: 'Rejected',    status: 'REJECTED',     color: 'bg-red-50 text-red-700 border-red-200' },
+];
 
 export default function TicketListPage() {
   const { user } = useAuth();
   const isAdmin  = user?.roles?.includes('ADMIN');
 
-  const [tickets, setTickets]   = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
-  const [page, setPage]         = useState(0);
+  const [tickets, setTickets]       = useState([]);
+  const [allTickets, setAllTickets] = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
+  const [page, setPage]             = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [filters, setFilters] = useState({
     status: '', category: '', priority: '',
@@ -32,6 +47,7 @@ export default function TicketListPage() {
       if (filters.priority) params.priority = filters.priority;
 
       const res = await getTickets(params);
+      setAllTickets(res.data.data.content);
       setTickets(res.data.data.content);
       setTotalPages(res.data.data.totalPages);
     } catch (err) {
@@ -43,6 +59,21 @@ export default function TicketListPage() {
 
   useEffect(() => { fetchTickets(); }, [page, filters]);
 
+  // Client-side search filter
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setTickets(allTickets);
+    } else {
+      const q = searchQuery.toLowerCase();
+      setTickets(allTickets.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        t.description?.toLowerCase().includes(q) ||
+        t.location?.toLowerCase().includes(q) ||
+        t.category?.toLowerCase().includes(q)
+      ));
+    }
+  }, [searchQuery, allTickets]);
+
   const handleFilterChange = (e) => {
     setFilters((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setPage(0);
@@ -50,11 +81,19 @@ export default function TicketListPage() {
 
   const clearFilters = () => {
     setFilters({ status: '', category: '', priority: '' });
+    setSearchQuery('');
     setPage(0);
   };
 
+  // Stats counts
+  const stats = STATS_CONFIG.map(s => ({
+    ...s,
+    count: allTickets.filter(t => t.status === s.status).length
+  }));
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -62,7 +101,7 @@ export default function TicketListPage() {
             {isAdmin ? 'All Tickets' : 'My Tickets'}
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {isAdmin ? 'View and manage all incident tickets' : 'Track your submitted incidents'}
+            {isAdmin ? 'View and manage all incident tickets' : 'Track your submitted issues'}
           </p>
         </div>
         <Link
@@ -71,6 +110,27 @@ export default function TicketListPage() {
         >
           + New ticket
         </Link>
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-5 gap-3 mb-5">
+        {stats.map(s => (
+          <div key={s.status} className={`rounded-xl border px-4 py-3 text-center ${s.color}`}>
+            <p className="text-2xl font-bold">{s.count}</p>
+            <p className="text-xs font-medium mt-0.5">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Search bar */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="🔍 Search tickets by title, description, location or category..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
       </div>
 
       {/* Filters (admin only) */}
@@ -93,7 +153,7 @@ export default function TicketListPage() {
             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All categories</option>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace('_',' ')}</option>)}
+            {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g,' ')}</option>)}
           </select>
 
           <select
@@ -106,21 +166,22 @@ export default function TicketListPage() {
             {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
 
-          {(filters.status || filters.category || filters.priority) && (
+          {(filters.status || filters.category || filters.priority || searchQuery) && (
             <button onClick={clearFilters} className="text-sm text-gray-500 hover:text-gray-800 underline">
-              Clear filters
+              Clear all
             </button>
           )}
         </div>
       )}
 
-      {/* Content */}
+      {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mb-4">
           {error}
         </div>
       )}
 
+      {/* Ticket list */}
       {loading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
@@ -131,7 +192,9 @@ export default function TicketListPage() {
         <div className="text-center py-16 text-gray-400">
           <p className="text-4xl mb-2">📋</p>
           <p className="font-medium">No tickets found</p>
-          <p className="text-sm mt-1">Submit a new ticket to get started</p>
+          <p className="text-sm mt-1">
+            {searchQuery ? 'Try a different search term' : 'Submit a new ticket to get started'}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -149,8 +212,9 @@ export default function TicketListPage() {
                   </div>
                   <p className="font-medium text-gray-900 truncate">{ticket.title}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {ticket.category.replace('_',' ')} · {ticket.location || 'No location'}
-                    {ticket.assignedTechnicianName && ` · Assigned to ${ticket.assignedTechnicianName}`}
+                    {ticket.category?.replace(/_/g,' ')} 
+                    {ticket.location ? ` · ${ticket.location}` : ''}
+                    {ticket.assignedTechnicianName ? ` · Assigned to ${ticket.assignedTechnicianName}` : ''}
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">

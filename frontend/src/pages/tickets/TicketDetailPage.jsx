@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   getTicketById, updateTicketStatus,
-  assignTechnician, deleteTicket,
+  assignTechnician, deleteTicket, uploadAttachments,
 } from '../../api/ticketApi';
 import { useAuth } from '../../context/AuthContext';
 import TicketStatusBadge from '../../components/tickets/TicketStatusBadge';
@@ -10,31 +10,36 @@ import PriorityBadge from '../../components/tickets/PriorityBadge';
 import CommentSection from '../../components/tickets/CommentSection';
 
 const NEXT_STATUSES = {
-  OPEN:        ['IN_PROGRESS','REJECTED'],
-  IN_PROGRESS: ['RESOLVED','REJECTED'],
+  OPEN:        ['IN_PROGRESS', 'REJECTED'],
+  IN_PROGRESS: ['RESOLVED', 'REJECTED'],
   RESOLVED:    ['CLOSED'],
   CLOSED:      [],
   REJECTED:    [],
 };
 
 export default function TicketDetailPage() {
-  const { id }    = useParams();
-  const navigate  = useNavigate();
-  const { user }  = useAuth();
-  const isAdmin   = user?.roles?.includes('ADMIN');
-  const isTech    = user?.roles?.includes('TECHNICIAN') || isAdmin;
+  const { id }   = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin  = user?.roles?.includes('ADMIN');
+  const isTech   = user?.roles?.includes('TECHNICIAN') || isAdmin;
 
-  const [ticket, setTicket]     = useState(null);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
+  const [ticket, setTicket]   = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState('');
 
-  // Status update panel
-  const [statusForm, setStatusForm] = useState({ status: '', resolutionNotes: '', rejectionReason: '' });
+  // Status update
+  const [statusForm, setStatusForm]     = useState({ status: '', resolutionNotes: '', rejectionReason: '' });
   const [statusLoading, setStatusLoading] = useState(false);
 
-  // Assign technician panel
-  const [assignForm, setAssignForm]     = useState({ technicianId: '', technicianName: '' });
+  // Assign technician
+  const [assignForm, setAssignForm]       = useState({ technicianId: '', technicianName: '' });
   const [assignLoading, setAssignLoading] = useState(false);
+
+  // Attachments
+  const [uploadFiles, setUploadFiles]     = useState([]);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadError, setUploadError]     = useState('');
 
   const loadTicket = async () => {
     try {
@@ -78,6 +83,22 @@ export default function TicketDetailPage() {
     }
   };
 
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    if (!uploadFiles.length) return;
+    setUploadLoading(true);
+    setUploadError('');
+    try {
+      await uploadAttachments(id, uploadFiles);
+      await loadTicket();
+      setUploadFiles([]);
+    } catch (err) {
+      setUploadError(err.response?.data?.message || 'Failed to upload attachments');
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!window.confirm('Permanently delete this ticket?')) return;
     try {
@@ -110,6 +131,7 @@ export default function TicketDetailPage() {
   }
 
   const nextStatuses = NEXT_STATUSES[ticket.status] || [];
+  const canAddMore   = (ticket.attachmentPaths?.length || 0) < 3;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-5">
@@ -142,18 +164,20 @@ export default function TicketDetailPage() {
 
         <p className="text-sm text-gray-600 leading-relaxed mb-5">{ticket.description}</p>
 
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm border-t pt-4">
-          <Detail label="Category"   value={ticket.category.replace('_',' ')} />
-          <Detail label="Location"   value={ticket.location || '—'} />
-          <Detail label="Contact"    value={ticket.preferredContact || '—'} />
+        {/* Details grid */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm border-t pt-4">
+          <Detail label="Category"    value={ticket.category?.replace(/_/g, ' ')} />
+          <Detail label="Location"    value={ticket.location || '—'} />
+          <Detail label="Contact"     value={ticket.preferredContact || '—'} />
           <Detail label="Reported by" value={ticket.createdBy} />
-          <Detail label="Technician" value={ticket.assignedTechnicianName || 'Unassigned'} />
-          <Detail label="Created"    value={new Date(ticket.createdAt).toLocaleString()} />
+          <Detail label="Technician"  value={ticket.assignedTechnicianName || 'Unassigned'} />
+          <Detail label="Created"     value={new Date(ticket.createdAt).toLocaleString()} />
           {ticket.resolvedAt && (
             <Detail label="Resolved" value={new Date(ticket.resolvedAt).toLocaleString()} />
           )}
         </div>
 
+        {/* Resolution notes */}
         {ticket.resolutionNotes && (
           <div className="mt-4 bg-green-50 border border-green-100 rounded-lg p-3">
             <p className="text-xs font-semibold text-green-700 mb-1">Resolution notes</p>
@@ -161,6 +185,7 @@ export default function TicketDetailPage() {
           </div>
         )}
 
+        {/* Rejection reason */}
         {ticket.rejectionReason && (
           <div className="mt-4 bg-red-50 border border-red-100 rounded-lg p-3">
             <p className="text-xs font-semibold text-red-700 mb-1">Rejection reason</p>
@@ -170,21 +195,60 @@ export default function TicketDetailPage() {
 
         {/* Attachments */}
         {ticket.attachmentPaths?.length > 0 && (
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-gray-500 mb-2">Attachments</p>
-            <div className="flex gap-2 flex-wrap">
+          <div className="mt-5">
+            <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+              Attachments ({ticket.attachmentPaths.length}/3)
+            </p>
+            <div className="flex gap-3 flex-wrap">
               {ticket.attachmentPaths.map((path, i) => (
-                <a
-                  key={i}
-                  href={`http://localhost:8081/uploads/${path}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:underline border border-blue-100 rounded px-2 py-1 bg-blue-50"
-                >
-                  Attachment {i + 1}
-                </a>
+                <div key={i} className="relative group">
+                  <img
+                    src={`http://localhost:8081/uploads/${path}`}
+                    alt={`Attachment ${i + 1}`}
+                    className="w-24 h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                  <a
+                    href={`http://localhost:8081/uploads/${path}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'none' }}
+                    className="w-24 h-24 border border-blue-100 rounded-lg bg-blue-50 items-center justify-center text-xs text-blue-600 hover:underline"
+                  >
+                    Attachment {i + 1}
+                  </a>
+                </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Upload more attachments */}
+        {canAddMore && (
+          <div className="mt-4">
+            <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+              Add attachments ({ticket.attachmentPaths?.length || 0}/3)
+            </p>
+            <form onSubmit={handleUpload} className="flex gap-2 items-center flex-wrap">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => setUploadFiles(Array.from(e.target.files))}
+                className="text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              <button
+                type="submit"
+                disabled={uploadLoading || !uploadFiles.length}
+                className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {uploadLoading ? 'Uploading...' : 'Upload'}
+              </button>
+            </form>
+            {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
           </div>
         )}
       </div>
@@ -201,13 +265,13 @@ export default function TicketDetailPage() {
             >
               <option value="">Select new status</option>
               {nextStatuses.map((s) => (
-                <option key={s} value={s}>{s.replace('_',' ')}</option>
+                <option key={s} value={s}>{s.replace('_', ' ')}</option>
               ))}
             </select>
 
             {statusForm.status === 'RESOLVED' && (
               <textarea
-                placeholder="Resolution notes (required for resolved)"
+                placeholder="Resolution notes (describe how the issue was fixed)"
                 value={statusForm.resolutionNotes}
                 onChange={(e) => setStatusForm((p) => ({ ...p, resolutionNotes: e.target.value }))}
                 rows={3}
@@ -218,7 +282,7 @@ export default function TicketDetailPage() {
             {statusForm.status === 'REJECTED' && (
               <input
                 type="text"
-                placeholder="Rejection reason"
+                placeholder="Reason for rejection"
                 value={statusForm.rejectionReason}
                 onChange={(e) => setStatusForm((p) => ({ ...p, rejectionReason: e.target.value }))}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"

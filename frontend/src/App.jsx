@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import TicketListPage   from './pages/tickets/TicketListPage';
 import TicketDetailPage from './pages/tickets/TicketDetailPage';
 import CreateTicketPage from './pages/tickets/CreateTicketPage';
+import DashboardPage from './pages/dashboard/DashboardPage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -33,8 +34,9 @@ function Navbar() {
   const { user, logout } = useAuth();
   return (
     <nav className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
-      <a href="/tickets" className="text-base font-bold text-gray-900">Smart Campus</a>
+      <a href="/dashboard" className="text-base font-bold text-gray-900">Smart Campus</a>
       <div className="flex items-center gap-4">
+        <a href="/dashboard" className="text-sm text-gray-600 hover:text-gray-900">Dashboard</a>
         <a href="/tickets" className="text-sm text-gray-600 hover:text-gray-900">Tickets</a>
         <span className="text-sm text-gray-400">{user?.name}</span>
         <button onClick={logout} className="text-sm text-gray-500 hover:text-red-600">Sign out</button>
@@ -62,10 +64,12 @@ export default function App() {
             <ProtectedRoute>
               <AppLayout>
                 <Routes>
-                  <Route path="/"               element={<Navigate to="/tickets" replace />} />
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/tickets"         element={<TicketListPage />} />
                   <Route path="/tickets/new"     element={<CreateTicketPage />} />
                   <Route path="/tickets/:id"     element={<TicketDetailPage />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  
                 </Routes>
               </AppLayout>
             </ProtectedRoute>
