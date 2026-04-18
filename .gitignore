@@ -17,11 +17,18 @@ dist/
 *.iml
 .vscode/
 
+
+backend/src/main/resources/application-dev.properties
+backend/.env
+.env
+.env.*
+
+backend/src/main/resources/application-prod.properties
+
 # OS
+.DS_Store
+Thumbs.db
+
 .DS_Store
 <<<<<<< HEAD
 Thumbs.db
-
-=======
-Thumbs.db
->>>>>>> f74bf82 (chore: add root gitignore to protect credentials)
