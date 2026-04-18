@@ -30,7 +30,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/tickets")
-@CrossOrigin(origins = "${app.cors.allowed-origins:http://localhost:5173}")
+@CrossOrigin(origins = "${app.cors.allowed-origins:http://localhost:3000}")
 public class TicketController {
 
     private final TicketService ticketService;

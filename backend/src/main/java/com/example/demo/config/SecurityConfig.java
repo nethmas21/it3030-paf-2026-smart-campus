@@ -23,23 +23,21 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
-                // All API endpoints require authentication (method-level security handles roles)
                 .requestMatchers("/api/**").authenticated()
+                .requestMatchers("/api/v1/auth/me").authenticated()
                 .anyRequest().permitAll()
             )
             .oauth2Login(oauth2 -> oauth2
-                .defaultSuccessUrl("http://localhost:5173/dashboard", true)
-                .failureUrl("http://localhost:5173/login?error=true")
+                .defaultSuccessUrl("http://localhost:3000/tickets", true)
+                .failureUrl("http://localhost:3000/login?error=true")
             )
             .logout(logout -> logout
-                .logoutSuccessUrl("http://localhost:5173/")
+                .logoutSuccessUrl("http://localhost:3000/")
                 .clearAuthentication(true)
                 .invalidateHttpSession(true)
             )
-            // Allow H2 console frames in dev
             .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
 
         return http.build();
@@ -48,7 +46,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOrigins(List.of("http://localhost:3000"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

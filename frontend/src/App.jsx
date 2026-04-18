@@ -12,19 +12,18 @@ function ProtectedRoute({ children }) {
 }
 
 function LoginPage() {
-  const { login } = useAuth();
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center max-w-sm w-full">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Smart Campus</h1>
         <p className="text-sm text-gray-500 mb-8">Sign in to manage facilities and incidents</p>
-        <button
-          onClick={login}
+        <a
+          href="http://localhost:8081/oauth2/authorization/google"
           className="w-full flex items-center justify-center gap-3 px-5 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
         >
           <img src="https://www.google.com/favicon.ico" alt="" className="w-4 h-4" />
           Continue with Google
-        </button>
+        </a>
       </div>
     </div>
   );
