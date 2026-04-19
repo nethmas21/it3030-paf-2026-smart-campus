@@ -77,6 +77,12 @@ public class ResourceService {
                 .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
+    // Search by name keyword
+    public List<ResourceResponseDTO> searchByKeyword(String keyword) {
+    return resourceRepository.findByNameContainingIgnoreCase(keyword)
+            .stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+
     // Helper: Entity → DTO
     private ResourceResponseDTO mapToDTO(Resource resource) {
         ResourceResponseDTO dto = new ResourceResponseDTO();

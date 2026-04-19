@@ -19,6 +19,8 @@ public interface ResourceRepository extends JpaRepository<Resource, Long> {
 
     List<Resource> findByCapacityGreaterThanEqual(Integer capacity);
 
+    List<Resource> findByNameContainingIgnoreCase(String keyword);
+
     @Query("SELECT r FROM Resource r WHERE " +
            "(:type IS NULL OR r.type = :type) AND " +
            "(:location IS NULL OR r.location = :location) AND " +
