@@ -4,6 +4,7 @@ import TicketListPage   from './pages/tickets/TicketListPage';
 import TicketDetailPage from './pages/tickets/TicketDetailPage';
 import CreateTicketPage from './pages/tickets/CreateTicketPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
+import AdminPage from './pages/admin/AdminPage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -38,6 +39,9 @@ function Navbar() {
       <div className="flex items-center gap-4">
         <a href="/dashboard" className="text-sm text-gray-600 hover:text-gray-900">Dashboard</a>
         <a href="/tickets" className="text-sm text-gray-600 hover:text-gray-900">Tickets</a>
+        {user?.roles?.includes('ADMIN') && (
+          <a href="/admin" className="text-sm text-purple-600 font-medium hover:text-purple-800">Admin</a>
+        )}
         <span className="text-sm text-gray-400">{user?.name}</span>
         <button onClick={logout} className="text-sm text-gray-500 hover:text-red-600">Sign out</button>
       </div>
@@ -69,6 +73,7 @@ export default function App() {
                   <Route path="/tickets/new"     element={<CreateTicketPage />} />
                   <Route path="/tickets/:id"     element={<TicketDetailPage />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/admin" element={<AdminPage />} />
                   
                 </Routes>
               </AppLayout>
