@@ -40,6 +40,8 @@ function Navbar() {
       <a href="/tickets" className="text-base font-bold text-gray-900">Smart Campus</a>
       <div className="flex items-center gap-4">
         <a href="/tickets" className="text-sm text-gray-600 hover:text-gray-900">Tickets</a>
+        <a href="/resources" className="text-sm text-gray-600 hover:text-gray-900">Resources</a>
+        <a href="/admin/resources" className="text-sm text-gray-600 hover:text-gray-900">Manage Resources</a>
         <span className="text-sm text-gray-400">{user?.name}</span>
         <button onClick={logout} className="text-sm text-gray-500 hover:text-red-600">Sign out</button>
       </div>
