@@ -64,4 +64,11 @@ public class ResourceController {
         resourceService.deleteResource(id);
         return ResponseEntity.noContent().build();
     }
+
+    // 6. Search resources by name keyword
+    @GetMapping("/search")
+    public ResponseEntity<List<ResourceResponseDTO>> searchByKeyword(
+        @RequestParam String keyword) {
+        return ResponseEntity.ok(resourceService.searchByKeyword(keyword));
+    }
 }
