@@ -87,15 +87,17 @@ export default function CommentSection({ ticketId, comments, onRefresh }) {
                 </div>
                 <p className="text-sm text-gray-600">{c.content}</p>
 
-                {/* Show edit/delete only for own comments */}
-                {user?.sub === c.authorId && (
+                {/* Edit — own comments only | Delete — own comments OR admin */}
+                {(user?.sub === c.authorId || user?.roles?.includes('ADMIN')) && (
                   <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => { setEditingId(c.id); setEditContent(c.content); }}
-                      className="text-xs text-blue-500 hover:underline"
-                    >
-                      Edit
-                    </button>
+                    {user?.sub === c.authorId && (
+                      <button
+                        onClick={() => { setEditingId(c.id); setEditContent(c.content); }}
+                        className="text-xs text-blue-500 hover:underline"
+                      >
+                        Edit
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDelete(c.id)}
                       className="text-xs text-red-500 hover:underline"
