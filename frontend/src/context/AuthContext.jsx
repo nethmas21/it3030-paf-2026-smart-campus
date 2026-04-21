@@ -8,6 +8,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Only fetch user info if we're not on the login page
+    if (window.location.pathname === '/login') {
+      setLoading(false);
+      return;
+    }
+
     apiClient.get('/auth/me')
       .then((res) => setUser(res.data.data))
       .catch(() => setUser(null))
@@ -15,14 +21,12 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = () => {
+    // Full browser redirect — NOT axios — this is required for OAuth
     window.location.href = 'http://localhost:8081/oauth2/authorization/google';
   };
 
   const logout = () => {
-    apiClient.post('/auth/logout').finally(() => {
-      setUser(null);
-      window.location.href = '/';
-    });
+    window.location.href = 'http://localhost:8081/logout';
   };
 
   return (

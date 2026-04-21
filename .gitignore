@@ -1,0 +1,34 @@
+# Secrets — never commit credentials
+.env
+**/application-dev.properties
+
+# Java
+target/
+*.class
+*.jar
+
+# Node
+node_modules/
+build/
+dist/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+
+backend/src/main/resources/application-dev.properties
+backend/.env
+.env
+.env.*
+
+backend/src/main/resources/application-prod.properties
+
+# OS
+.DS_Store
+Thumbs.db
+
+.DS_Store
+<<<<<<< HEAD
+Thumbs.db

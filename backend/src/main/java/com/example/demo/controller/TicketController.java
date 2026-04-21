@@ -21,26 +21,29 @@ import com.example.demo.dto.request.UpdateTicketStatusRequest;
 import com.example.demo.dto.response.ApiResponse;
 import com.example.demo.dto.response.CommentResponse;
 import com.example.demo.dto.response.TicketResponse;
+import com.example.demo.entity.User;
 import com.example.demo.enums.TicketCategory;
 import com.example.demo.enums.TicketPriority;
 import com.example.demo.enums.TicketStatus;
+import com.example.demo.repository.UserRepository;
 import com.example.demo.service.TicketService;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/tickets")
-@CrossOrigin(origins = "${app.cors.allowed-origins:http://localhost:5173}")
+@CrossOrigin(origins = "${app.cors.allowed-origins:http://localhost:3000}")
 public class TicketController {
 
     private final TicketService ticketService;
+    private final UserRepository userRepository;
 
-    public TicketController(TicketService ticketService) {
+    public TicketController(TicketService ticketService, UserRepository userRepository) {
         this.ticketService = ticketService;
+        this.userRepository = userRepository;
     }
 
-    // ── POST /api/v1/tickets ─────────────────────────────────────────────────
-    // Any authenticated user can create a ticket
+    // ── POST /api/v1/tickets ──────────────────────────────────────────────────
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TicketResponse>> createTicket(
@@ -54,8 +57,7 @@ public class TicketController {
                 .body(ApiResponse.success("Ticket created successfully", response));
     }
 
-    // ── GET /api/v1/tickets ──────────────────────────────────────────────────
-    // ADMIN sees all; USER sees only their own
+    // ── GET /api/v1/tickets ───────────────────────────────────────────────────
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Page<TicketResponse>>> getTickets(
@@ -66,7 +68,7 @@ public class TicketController {
             @RequestParam(defaultValue = "10") int size,
             @AuthenticationPrincipal OAuth2User principal) {
 
-        boolean isAdmin = hasRole(principal, "ADMIN");
+        boolean isAdmin = isAdmin(principal);
         String userId = principal.getAttribute("sub");
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
@@ -77,7 +79,7 @@ public class TicketController {
         return ResponseEntity.ok(ApiResponse.success(tickets));
     }
 
-    // ── GET /api/v1/tickets/{id} ─────────────────────────────────────────────
+    // ── GET /api/v1/tickets/{id} ──────────────────────────────────────────────
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TicketResponse>> getTicketById(
@@ -85,10 +87,9 @@ public class TicketController {
             @AuthenticationPrincipal OAuth2User principal) {
 
         TicketResponse ticket = ticketService.getTicketById(id);
-
-        // Users can only view their own tickets; admins can view all
         String userId = principal.getAttribute("sub");
-        boolean isAdmin = hasRole(principal, "ADMIN");
+        boolean isAdmin = isAdmin(principal);
+
         if (!isAdmin && !ticket.getCreatedBy().equals(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Access denied"));
@@ -98,42 +99,60 @@ public class TicketController {
     }
 
     // ── PATCH /api/v1/tickets/{id}/status ────────────────────────────────────
-    // Technician or Admin can update status
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TicketResponse>> updateStatus(
             @PathVariable Long id,
             @Valid @RequestBody UpdateTicketStatusRequest request,
             @AuthenticationPrincipal OAuth2User principal) {
 
-        String role = hasRole(principal, "ADMIN") ? "ADMIN" : "TECHNICIAN";
+        boolean isAdmin = isAdmin(principal);
+        boolean isTech  = isTechnician(principal);
+
+        if (!isAdmin && !isTech) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Only ADMIN or TECHNICIAN can update ticket status"));
+        }
+
+        String role = isAdmin ? "ADMIN" : "TECHNICIAN";
         TicketResponse response = ticketService.updateStatus(id, request, role);
         return ResponseEntity.ok(ApiResponse.success("Ticket status updated", response));
     }
 
-    // ── PATCH /api/v1/tickets/{id}/assign-technician ─────────────────────────
-    // Admin only
+    // ── PATCH /api/v1/tickets/{id}/assign-technician ──────────────────────────
     @PatchMapping("/{id}/assign-technician")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TicketResponse>> assignTechnician(
             @PathVariable Long id,
-            @Valid @RequestBody AssignTechnicianRequest request) {
+            @Valid @RequestBody AssignTechnicianRequest request,
+            @AuthenticationPrincipal OAuth2User principal) {
+
+        if (!isAdmin(principal)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Only ADMIN can assign technicians"));
+        }
 
         TicketResponse response = ticketService.assignTechnician(id, request);
         return ResponseEntity.ok(ApiResponse.success("Technician assigned", response));
     }
 
-    // ── DELETE /api/v1/tickets/{id} ──────────────────────────────────────────
-    // Admin only
+    // ── DELETE /api/v1/tickets/{id} ───────────────────────────────────────────
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> deleteTicket(@PathVariable Long id) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> deleteTicket(
+            @PathVariable Long id,
+            @AuthenticationPrincipal OAuth2User principal) {
+
+        if (!isAdmin(principal)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Only ADMIN can delete tickets"));
+        }
+
         ticketService.deleteTicket(id);
         return ResponseEntity.ok(ApiResponse.success("Ticket deleted", null));
     }
 
-    // ── POST /api/v1/tickets/{id}/attachments ────────────────────────────────
-    // Multipart upload — max 3 images per ticket
+    // ── POST /api/v1/tickets/{id}/attachments ─────────────────────────────────
     @PostMapping(value = "/{id}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TicketResponse>> uploadAttachments(
@@ -187,15 +206,24 @@ public class TicketController {
             @AuthenticationPrincipal OAuth2User principal) {
 
         String requesterId = principal.getAttribute("sub");
-        boolean isAdmin    = hasRole(principal, "ADMIN");
+        boolean isAdmin    = isAdmin(principal);
         ticketService.deleteComment(id, commentId, requesterId, isAdmin);
         return ResponseEntity.ok(ApiResponse.success("Comment deleted", null));
     }
 
-    // ── Utility ───────────────────────────────────────────────────────────────
+    // ── Role helpers — check directly from DB ─────────────────────────────────
+    private User.Role getUserRole(OAuth2User principal) {
+        String googleId = principal.getAttribute("sub");
+        return userRepository.findByGoogleId(googleId)
+                .map(User::getRole)
+                .orElse(User.Role.USER);
+    }
 
-    private boolean hasRole(OAuth2User principal, String role) {
-        return principal.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_" + role));
+    private boolean isAdmin(OAuth2User principal) {
+        return getUserRole(principal) == User.Role.ADMIN;
+    }
+
+    private boolean isTechnician(OAuth2User principal) {
+        return getUserRole(principal) == User.Role.TECHNICIAN;
     }
 }
