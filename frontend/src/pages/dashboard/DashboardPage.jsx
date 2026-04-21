@@ -3,136 +3,94 @@ import { Link } from 'react-router-dom';
 import { getTickets } from '../../api/ticketApi';
 import { useAuth } from '../../context/AuthContext';
 
-const STATUS_COLORS = {
-  OPEN:        { bg: 'bg-blue-500',   light: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200' },
-  IN_PROGRESS: { bg: 'bg-yellow-500', light: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
-  RESOLVED:    { bg: 'bg-green-500',  light: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200' },
-  CLOSED:      { bg: 'bg-gray-400',   light: 'bg-gray-50',   text: 'text-gray-600',   border: 'border-gray-200' },
-  REJECTED:    { bg: 'bg-red-500',    light: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200' },
+const STATUS_CONFIG = {
+  OPEN:        { cls: 'badge-blue',   bar: 'bg-primary-500', label: 'Open' },
+  IN_PROGRESS: { cls: 'badge-yellow', bar: 'bg-warning-400', label: 'In Progress' },
+  RESOLVED:    { cls: 'badge-green',  bar: 'bg-success-500', label: 'Resolved' },
+  CLOSED:      { cls: 'badge-slate',  bar: 'bg-slate-300',   label: 'Closed' },
+  REJECTED:    { cls: 'badge-red',    bar: 'bg-danger-500',  label: 'Rejected' },
 };
 
-const PRIORITY_COLORS = {
-  LOW:      'bg-slate-100 text-slate-600',
-  MEDIUM:   'bg-orange-100 text-orange-700',
-  HIGH:     'bg-red-100 text-red-700',
-  CRITICAL: 'bg-red-600 text-white',
+const PRIORITY_CONFIG = {
+  CRITICAL: { bar: 'bg-danger-600',  cls: 'priority-critical' },
+  HIGH:     { bar: 'bg-danger-400',  cls: 'priority-high' },
+  MEDIUM:   { bar: 'bg-warning-400', cls: 'priority-medium' },
+  LOW:      { bar: 'bg-slate-300',   cls: 'priority-low' },
 };
-
-const PRIORITY_ORDER = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [tickets, setTickets]   = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        // Fetch up to 100 tickets for stats
-        const res = await getTickets({ page: 0, size: 100 });
-        setTickets(res.data.data.content || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAll();
+    getTickets({ page: 0, size: 100 })
+      .then(r => setTickets(r.data.data.content || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  // ── Computed stats ──────────────────────────────────────────────────────────
-  const total = tickets.length;
-
-  const byStatus = ['OPEN','IN_PROGRESS','RESOLVED','CLOSED','REJECTED'].map(s => ({
-    status: s,
-    count: tickets.filter(t => t.status === s).length,
-    label: s.replace('_', ' '),
-  }));
-
-  const byPriority = PRIORITY_ORDER.map(p => ({
-    priority: p,
-    count: tickets.filter(t => t.priority === p).length,
-  }));
-
-  const byCategory = Object.entries(
-    tickets.reduce((acc, t) => {
-      acc[t.category] = (acc[t.category] || 0) + 1;
-      return acc;
-    }, {})
-  ).sort((a, b) => b[1] - a[1]).slice(0, 6);
-
-  // Recent tickets
-  const recentTickets = [...tickets]
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 5);
-
-  // Open rate
+  const total         = tickets.length;
   const openCount     = tickets.filter(t => t.status === 'OPEN').length;
-  const resolvedCount = tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length;
-  const openRate      = total > 0 ? Math.round((openCount / total) * 100) : 0;
+  const resolvedCount = tickets.filter(t => ['RESOLVED','CLOSED'].includes(t.status)).length;
   const resolvedRate  = total > 0 ? Math.round((resolvedCount / total) * 100) : 0;
 
-  if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 bg-gray-100 rounded-xl animate-pulse" />
-          ))}
-        </div>
+  const byStatus   = Object.entries(STATUS_CONFIG).map(([s, c]) => ({ ...c, status: s, count: tickets.filter(t => t.status === s).length }));
+  const byPriority = ['CRITICAL','HIGH','MEDIUM','LOW'].map(p => ({ ...PRIORITY_CONFIG[p], priority: p, count: tickets.filter(t => t.priority === p).length }));
+  const byCategory = Object.entries(tickets.reduce((a, t) => { a[t.category] = (a[t.category]||0)+1; return a; }, {})).sort((a,b) => b[1]-a[1]).slice(0, 6);
+  const recent     = [...tickets].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
+
+  if (loading) return (
+    <div className="page-wide">
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        {[...Array(4)].map((_,i) => <div key={i} className="h-28 skeleton" />)}
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="page-wide">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Welcome back, {user?.name?.split(' ')[0]}! Here's your campus overview.
-          </p>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-subtitle">Welcome back, {user?.name?.split(' ')[0]}</p>
         </div>
-        <Link
-          to="/tickets/new"
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          + New ticket
-        </Link>
+        <Link to="/tickets/new" className="btn-primary">New Ticket</Link>
       </div>
 
-      {/* Top stat cards */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total Tickets"  value={total}         icon="📋" color="bg-white" />
-        <StatCard label="Open"           value={openCount}     icon="🔓" color="bg-blue-50" textColor="text-blue-700" />
-        <StatCard label="Resolved"       value={resolvedCount} icon="✅" color="bg-green-50" textColor="text-green-700" />
-        <StatCard label="Resolution Rate" value={`${resolvedRate}%`} icon="📈" color="bg-purple-50" textColor="text-purple-700" />
+        {[
+          { label: 'Total Tickets',    value: total,           color: 'text-slate-900' },
+          { label: 'Open',             value: openCount,       color: 'text-primary-600' },
+          { label: 'Resolved',         value: resolvedCount,   color: 'text-success-600' },
+          { label: 'Resolution Rate',  value: `${resolvedRate}%`, color: 'text-accent-600' },
+        ].map(s => (
+          <div key={s.label} className="stat-card">
+            <p className="stat-label">{s.label}</p>
+            <p className={`stat-value ${s.color}`}>{s.value}</p>
+          </div>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
         {/* Status breakdown */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Tickets by Status</h2>
-          <div className="space-y-3">
-            {byStatus.map(({ status, count, label }) => {
-              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-              const c   = STATUS_COLORS[status];
+        <div className="card">
+          <div className="card-header">
+            <h3>Tickets by Status</h3>
+            <span className="badge-slate">{total} total</span>
+          </div>
+          <div className="space-y-3.5">
+            {byStatus.map(({ status, cls, bar, label, count }) => {
+              const pct = total > 0 ? Math.round((count/total)*100) : 0;
               return (
                 <div key={status}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${c.light} ${c.text} ${c.border}`}>
-                      {label}
-                    </span>
-                    <span className="text-sm font-semibold text-gray-700">{count}</span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className={cls}>{label}</span>
+                    <span className="text-sm font-bold text-slate-700">{count}</span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${c.bg} transition-all duration-500`}
-                      style={{ width: `${pct}%` }}
-                    />
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${bar} transition-all duration-700`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
@@ -141,24 +99,22 @@ export default function DashboardPage() {
         </div>
 
         {/* Priority breakdown */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Tickets by Priority</h2>
-          <div className="space-y-3">
-            {byPriority.map(({ priority, count }) => {
-              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+        <div className="card">
+          <div className="card-header">
+            <h3>Tickets by Priority</h3>
+            <span className="badge-slate">{total} total</span>
+          </div>
+          <div className="space-y-3.5">
+            {byPriority.map(({ priority, cls, bar, count }) => {
+              const pct = total > 0 ? Math.round((count/total)*100) : 0;
               return (
                 <div key={priority}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${PRIORITY_COLORS[priority]}`}>
-                      {priority}
-                    </span>
-                    <span className="text-sm font-semibold text-gray-700">{count}</span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className={cls}>{priority}</span>
+                    <span className="text-sm font-bold text-slate-700">{count}</span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-indigo-400 transition-all duration-500"
-                      style={{ width: `${pct}%` }}
-                    />
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${bar} transition-all duration-700`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
@@ -167,21 +123,28 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Top categories */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Top Categories</h2>
+        <div className="card">
+          <div className="card-header">
+            <h3>Top Categories</h3>
+          </div>
           {byCategory.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No data yet</p>
+            <div className="empty-state">
+              <div className="empty-icon">
+                <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+              </div>
+              <p className="empty-title">No data yet</p>
+            </div>
           ) : (
-            <div className="space-y-2">
-              {byCategory.map(([category, count]) => (
-                <div key={category} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
-                  <span className="text-sm text-gray-600">{category.replace(/_/g, ' ')}</span>
-                  <span className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-0.5 rounded-full">
-                    {count}
-                  </span>
+            <div className="space-y-1">
+              {byCategory.map(([cat, count], i) => (
+                <div key={cat} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-slate-300 w-5 text-right">{i+1}</span>
+                    <span className="text-sm text-slate-700 font-medium">{cat.replace(/_/g,' ')}</span>
+                  </div>
+                  <span className="badge-slate">{count}</span>
                 </div>
               ))}
             </div>
@@ -189,46 +152,35 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent tickets */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700">Recent Tickets</h2>
-            <Link to="/tickets" className="text-xs text-blue-600 hover:underline">View all</Link>
+        <div className="card">
+          <div className="card-header">
+            <h3>Recent Tickets</h3>
+            <Link to="/tickets" className="btn-link">View all</Link>
           </div>
-          {recentTickets.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No tickets yet</p>
+          {recent.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">
+                <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+              </div>
+              <p className="empty-title">No tickets yet</p>
+              <p className="empty-subtitle">Submit your first ticket</p>
+            </div>
           ) : (
-            <div className="space-y-2">
-              {recentTickets.map(ticket => (
-                <Link
-                  key={ticket.id}
-                  to={`/tickets/${ticket.id}`}
-                  className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 rounded px-1 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-800 truncate">{ticket.title}</p>
-                    <p className="text-xs text-gray-400">{new Date(ticket.createdAt).toLocaleDateString()}</p>
+            <div className="space-y-1">
+              {recent.map(t => (
+                <Link key={t.id} to={`/tickets/${t.id}`}
+                  className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+                  <div className="flex-1 min-w-0 pr-3">
+                    <p className="text-sm font-semibold text-slate-800 truncate">{t.title}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{new Date(t.createdAt).toLocaleDateString()}</p>
                   </div>
-                  <span className={`ml-2 text-xs px-2 py-0.5 rounded-full border shrink-0 ${STATUS_COLORS[ticket.status]?.light} ${STATUS_COLORS[ticket.status]?.text} ${STATUS_COLORS[ticket.status]?.border}`}>
-                    {ticket.status.replace('_', ' ')}
-                  </span>
+                  <span className={STATUS_CONFIG[t.status]?.cls}>{STATUS_CONFIG[t.status]?.label}</span>
                 </Link>
               ))}
             </div>
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value, icon, color, textColor = 'text-gray-800' }) {
-  return (
-    <div className={`${color} rounded-xl border border-gray-100 shadow-sm p-5`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-2xl">{icon}</span>
-      </div>
-      <p className={`text-3xl font-bold ${textColor}`}>{value}</p>
-      <p className="text-xs text-gray-500 mt-1 font-medium">{label}</p>
     </div>
   );
 }
