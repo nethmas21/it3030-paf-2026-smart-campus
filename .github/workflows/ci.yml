@@ -28,6 +28,9 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
       - name: Build with Maven
         run: ./mvnw clean compile -B
         env:
@@ -60,5 +63,4 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_API_URL: http://localhost:8081/api/v1
           CI: false
