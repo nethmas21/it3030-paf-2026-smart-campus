@@ -5,6 +5,9 @@ import TicketDetailPage from './pages/tickets/TicketDetailPage';
 import CreateTicketPage from './pages/tickets/CreateTicketPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import AdminPage from './pages/admin/AdminPage';
+import CreateBookingPage from './pages/bookings/CreateBookingPage';
+import MyBookingsPage from './pages/bookings/MyBookingsPage';
+import AdminBookingsPage from './pages/bookings/AdminBookingsPage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -39,8 +42,13 @@ function Navbar() {
       <div className="flex items-center gap-4">
         <a href="/dashboard" className="text-sm text-gray-600 hover:text-gray-900">Dashboard</a>
         <a href="/tickets" className="text-sm text-gray-600 hover:text-gray-900">Tickets</a>
+        <a href="/bookings/my" className="text-sm text-gray-600 hover:text-gray-900">Bookings</a>
+        <a href="/bookings/new" className="text-sm text-gray-600 hover:text-gray-900">New Booking</a>
         {user?.roles?.includes('ADMIN') && (
-          <a href="/admin" className="text-sm text-purple-600 font-medium hover:text-purple-800">Admin</a>
+          <>
+            <a href="/admin" className="text-sm text-purple-600 font-medium hover:text-purple-800">Admin</a>
+            <a href="/admin/bookings" className="text-sm text-purple-600 font-medium hover:text-purple-800">Manage Bookings</a>
+          </>
         )}
         <span className="text-sm text-gray-400">{user?.name}</span>
         <button onClick={logout} className="text-sm text-gray-500 hover:text-red-600">Sign out</button>
@@ -74,7 +82,9 @@ export default function App() {
                   <Route path="/tickets/:id"     element={<TicketDetailPage />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/admin" element={<AdminPage />} />
-                  
+                  <Route path="/bookings/new" element={<CreateBookingPage />} />
+                  <Route path="/bookings/my" element={<MyBookingsPage />} />
+                  <Route path="/admin/bookings" element={<AdminBookingsPage />} />
                 </Routes>
               </AppLayout>
             </ProtectedRoute>
