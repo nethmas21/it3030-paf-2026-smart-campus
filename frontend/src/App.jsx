@@ -85,6 +85,7 @@ export default function App() {
                   <Route path="/bookings/new" element={<CreateBookingPage />} />
                   <Route path="/bookings/my" element={<MyBookingsPage />} />
                   <Route path="/admin/bookings" element={<AdminBookingsPage />} />
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </AppLayout>
             </ProtectedRoute>
