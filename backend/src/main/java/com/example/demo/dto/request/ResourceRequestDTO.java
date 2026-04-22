@@ -26,8 +26,8 @@ public class ResourceRequestDTO {
     private String location;
 
     @Pattern(
-        regexp = "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$",
-        message = "Availability must be in format HH:MM-HH:MM"
+        regexp = "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^$",
+        message = "Availability must be in format HH:MM-HH:MM or empty"
     )
 
     private String availabilityWindows;

@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 const ResourceForm = ({ onSubmit, initialData, onCancel }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    type: 'LAB',
-    capacity: '',
-    location: '',
-    availabilityWindows: '',
-    status: 'ACTIVE',
-    description: ''
+    name: "",
+    type: "LAB",
+    capacity: "",
+    location: "",
+    availabilityWindows: "",
+    status: "ACTIVE",
+    description: "",
   });
+
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   // If editing, fill form with existing data
   useEffect(() => {
@@ -18,15 +21,39 @@ const ResourceForm = ({ onSubmit, initialData, onCancel }) => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(""); // Clear error when user types
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    setError("");
+    setSubmitting(true);
+
+    // Convert capacity to number and handle empty availability
+    const payload = {
+      ...formData,
+      capacity: parseInt(formData.capacity, 10),
+      availabilityWindows: formData.availabilityWindows || null,
+    };
+
+    try {
+      await onSubmit(payload);
+    } catch (err) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Error message inside form */}
+      {error && (
+        <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <span className="text-red-500 text-sm">❌</span>
+          <p className="text-xs text-red-600">{error}</p>
+        </div>
+      )}
 
       {/* Name */}
       <div>
@@ -100,6 +127,16 @@ const ResourceForm = ({ onSubmit, initialData, onCancel }) => {
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Availability Hours
         </label>
+
+        {/* Format reminder box */}
+        <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mb-2">
+          <span className="text-blue-500 text-sm mt-0.5">ℹ️</span>
+          <p className="text-xs text-blue-600">
+            Format must be <strong>HH:MM-HH:MM</strong> using colons. Example:{" "}
+            <strong>08:00-18:00</strong>
+          </p>
+        </div>
+
         <input
           type="text"
           name="availabilityWindows"
@@ -145,9 +182,14 @@ const ResourceForm = ({ onSubmit, initialData, onCancel }) => {
       <div className="flex gap-3 pt-2">
         <button
           type="submit"
-          className="flex-1 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition font-medium"
+          disabled={submitting}
+          className="flex-1 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition font-medium disabled:opacity-50"
         >
-          {initialData ? 'Update Resource' : 'Create Resource'}
+          {submitting
+            ? "Saving..."
+            : initialData
+              ? "Update Resource"
+              : "Create Resource"}
         </button>
         <button
           type="button"
