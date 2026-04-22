@@ -27,21 +27,33 @@ export default function AdminBookingsPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState('');
+
   const fetchBookings = async () => {
     setLoading(true);
+    setError('');
     try {
       const params = { page, size: 10 };
       if (status) params.status = status;
 
       const res = await getAllBookings(params);
+      console.log('Bookings response:', res.data);
+
       setBookings(res.data.data.content || []);
       setTotalPages(res.data.data.totalPages || 0);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch bookings:', err);
+      setError(err?.response?.data?.message || 'Failed to load bookings');
     } finally {
       setLoading(false);
     }
   };
+
+  {error && (
+  <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 mb-4">
+    {error}
+  </div>
+) }
 
   useEffect(() => {
     if (isAdmin) {
