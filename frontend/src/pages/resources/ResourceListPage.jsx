@@ -6,6 +6,7 @@ import ResourceFilter from '../../components/resources/ResourceFilter';
 
 const ResourceListPage = () => {
   const [resources, setResources] = useState([]);
+  const [allResources, setAllResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -20,6 +21,10 @@ const ResourceListPage = () => {
       setLoading(true);
       const data = await resourceApi.getAll(filters);
       setResources(data);
+      // Save all resources for counting
+      if (Object.keys(filters).every(k => !filters[k])) {
+        setAllResources(data);
+      }
     } catch (err) {
       setError('Failed to load resources');
     } finally {
@@ -34,6 +39,13 @@ const ResourceListPage = () => {
   const handleView = (id) => {
     navigate(`/resources/${id}`);
   };
+
+   // Count resources by type
+  const typeCounts = allResources.reduce((acc, r) => {
+    acc[r.type] = (acc[r.type] || 0) + 1;
+    return acc;
+  }, {});
+
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -55,6 +67,19 @@ const ResourceListPage = () => {
           Browse available facilities and equipment
         </p>
       </div>
+
+       {/* Type Count Summary Badges */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {Object.entries(typeCounts).map(([type, count]) => (
+          <span
+            key={type}
+            className="bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1 rounded-full border border-blue-100"
+          >
+            {type.replace('_', ' ')}: {count}
+          </span>
+        ))}
+      </div>
+      
 
       {/* Filter Bar */}
       <ResourceFilter onFilter={handleFilter} />
