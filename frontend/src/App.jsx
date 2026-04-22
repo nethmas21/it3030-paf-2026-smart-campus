@@ -97,7 +97,6 @@ function Navbar() {
   const isActive = (to) => {
     if (to === '/tickets') return location.pathname.startsWith('/tickets');
     if (to === '/resources') return location.pathname.startsWith('/resources');
-    if (to === '/admin/resources') return location.pathname.startsWith('/admin/resources');
     if (to === '/admin') return location.pathname === '/admin';
     return location.pathname === to;
   };
@@ -132,12 +131,6 @@ function Navbar() {
 
           {isAdmin && (
             <>
-              <a
-                href="/admin/resources"
-                className={isActive('/admin/resources') ? 'nav-link-active' : 'nav-link-admin'}
-              >
-                Manage Resources
-              </a>
               <a
                 href="/admin"
                 className={isActive('/admin') ? 'nav-link-active' : 'nav-link-admin'}

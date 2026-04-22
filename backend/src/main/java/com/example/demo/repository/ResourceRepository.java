@@ -21,15 +21,15 @@ public interface ResourceRepository extends JpaRepository<Resource, Long> {
 
     List<Resource> findByNameContainingIgnoreCase(String keyword);
 
-    @Query("SELECT r FROM Resource r WHERE " +
-           "(:type IS NULL OR r.type = :type) AND " +
-           "(:location IS NULL OR r.location = :location) AND " +
-           "(:minCapacity IS NULL OR r.capacity >= :minCapacity) AND " +
-           "(:status IS NULL OR r.status = :status)")
-    List<Resource> searchResources(
-        @Param("type") ResourceType type,
-        @Param("location") String location,
-        @Param("minCapacity") Integer minCapacity,
-        @Param("status") ResourceStatus status
-    );
+@Query("SELECT r FROM Resource r WHERE " +
+   "(:type IS NULL OR r.type = :type) AND " +
+   "(:location IS NULL OR LENGTH(:location) < 3 OR LOWER(r.location) LIKE LOWER(CONCAT('%', :location, '%'))) AND " +
+   "(:minCapacity IS NULL OR r.capacity >= :minCapacity) AND " +
+   "(:status IS NULL OR r.status = :status)")
+List<Resource> searchResources(
+    @Param("type") ResourceType type,
+    @Param("location") String location,
+    @Param("minCapacity") Integer minCapacity,
+    @Param("status") ResourceStatus status
+);
 }
