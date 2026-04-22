@@ -28,15 +28,12 @@ export default function TicketDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
 
-  // Status update
-  const [statusForm, setStatusForm]     = useState({ status: '', resolutionNotes: '', rejectionReason: '' });
+  const [statusForm, setStatusForm]       = useState({ status: '', resolutionNotes: '', rejectionReason: '' });
   const [statusLoading, setStatusLoading] = useState(false);
 
-  // Assign technician
   const [assignForm, setAssignForm]       = useState({ technicianId: '', technicianName: '' });
   const [assignLoading, setAssignLoading] = useState(false);
 
-  // Attachments
   const [uploadFiles, setUploadFiles]     = useState([]);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError]     = useState('');
@@ -132,6 +129,7 @@ export default function TicketDetailPage() {
 
   const nextStatuses = NEXT_STATUSES[ticket.status] || [];
   const canAddMore   = (ticket.attachmentPaths?.length || 0) < 3;
+  const isTerminal   = ticket.status === 'CLOSED' || ticket.status === 'REJECTED';
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-5">
@@ -164,7 +162,6 @@ export default function TicketDetailPage() {
 
         <p className="text-sm text-gray-600 leading-relaxed mb-5">{ticket.description}</p>
 
-        {/* Details grid */}
         <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm border-t pt-4">
           <Detail label="Category"    value={ticket.category?.replace(/_/g, ' ')} />
           <Detail label="Location"    value={ticket.location || '—'} />
@@ -177,7 +174,6 @@ export default function TicketDetailPage() {
           )}
         </div>
 
-        {/* Resolution notes */}
         {ticket.resolutionNotes && (
           <div className="mt-4 bg-green-50 border border-green-100 rounded-lg p-3">
             <p className="text-xs font-semibold text-green-700 mb-1">Resolution notes</p>
@@ -185,7 +181,6 @@ export default function TicketDetailPage() {
           </div>
         )}
 
-        {/* Rejection reason */}
         {ticket.rejectionReason && (
           <div className="mt-4 bg-red-50 border border-red-100 rounded-lg p-3">
             <p className="text-xs font-semibold text-red-700 mb-1">Rejection reason</p>
@@ -201,7 +196,7 @@ export default function TicketDetailPage() {
             </p>
             <div className="flex gap-3 flex-wrap">
               {ticket.attachmentPaths.map((path, i) => (
-                <div key={i} className="relative group">
+                <div key={i}>
                   <img
                     src={`http://localhost:8081/uploads/${path}`}
                     alt={`Attachment ${i + 1}`}
@@ -226,7 +221,7 @@ export default function TicketDetailPage() {
           </div>
         )}
 
-        {/* Upload more attachments */}
+        {/* Upload attachments */}
         {canAddMore && (
           <div className="mt-4">
             <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
@@ -253,10 +248,110 @@ export default function TicketDetailPage() {
         )}
       </div>
 
-      {/* Status update — Technician / Admin */}
-      {isTech && nextStatuses.length > 0 && (
+      {/* ── ADMIN MANAGEMENT PANEL ─────────────────────────────────────────── */}
+      {isAdmin && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-5">
+          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide border-b pb-3">
+            Admin Management
+          </h2>
+
+          {/* Status update */}
+          {!isTerminal ? (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-600 mb-3">Update Status</h3>
+              <form onSubmit={handleStatusUpdate} className="space-y-3">
+                <select
+                  value={statusForm.status}
+                  onChange={(e) => setStatusForm((p) => ({ ...p, status: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select new status</option>
+                  {nextStatuses.map((s) => (
+                    <option key={s} value={s}>{s.replace('_', ' ')}</option>
+                  ))}
+                </select>
+
+                {statusForm.status === 'RESOLVED' && (
+                  <textarea
+                    placeholder="Resolution notes"
+                    value={statusForm.resolutionNotes}
+                    onChange={(e) => setStatusForm((p) => ({ ...p, resolutionNotes: e.target.value }))}
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
+
+                {statusForm.status === 'REJECTED' && (
+                  <input
+                    type="text"
+                    placeholder="Reason for rejection"
+                    value={statusForm.rejectionReason}
+                    onChange={(e) => setStatusForm((p) => ({ ...p, rejectionReason: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
+
+                <button
+                  type="submit"
+                  disabled={statusLoading || !statusForm.status}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {statusLoading ? 'Updating...' : 'Update status'}
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-sm text-gray-500">
+                This ticket is <strong>{ticket.status}</strong> — no further status updates allowed.
+              </p>
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="border-t border-gray-100" />
+
+          {/* Assign / Reassign technician — always visible for admin */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-600 mb-1">
+              {ticket.assignedTechnicianName ? 'Reassign Technician' : 'Assign Technician'}
+            </h3>
+            {ticket.assignedTechnicianName && (
+              <p className="text-xs text-gray-400 mb-3">
+                Currently assigned to: <strong>{ticket.assignedTechnicianName}</strong>
+              </p>
+            )}
+            <form onSubmit={handleAssign} className="flex gap-3 flex-wrap">
+              <input
+                type="text"
+                placeholder="Technician ID"
+                value={assignForm.technicianId}
+                onChange={(e) => setAssignForm((p) => ({ ...p, technicianId: e.target.value }))}
+                className="flex-1 min-w-[140px] border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Technician name"
+                value={assignForm.technicianName}
+                onChange={(e) => setAssignForm((p) => ({ ...p, technicianName: e.target.value }))}
+                className="flex-1 min-w-[140px] border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                disabled={assignLoading || !assignForm.technicianId || !assignForm.technicianName}
+                className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {assignLoading ? 'Assigning...' : ticket.assignedTechnicianName ? 'Reassign' : 'Assign'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Technician status update (non-admin) */}
+      {!isAdmin && isTech && nextStatuses.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">Update status</h2>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">Update Status</h2>
           <form onSubmit={handleStatusUpdate} className="space-y-3">
             <select
               value={statusForm.status}
@@ -268,63 +363,21 @@ export default function TicketDetailPage() {
                 <option key={s} value={s}>{s.replace('_', ' ')}</option>
               ))}
             </select>
-
             {statusForm.status === 'RESOLVED' && (
               <textarea
-                placeholder="Resolution notes (describe how the issue was fixed)"
+                placeholder="Resolution notes"
                 value={statusForm.resolutionNotes}
                 onChange={(e) => setStatusForm((p) => ({ ...p, resolutionNotes: e.target.value }))}
                 rows={3}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500"
               />
             )}
-
-            {statusForm.status === 'REJECTED' && (
-              <input
-                type="text"
-                placeholder="Reason for rejection"
-                value={statusForm.rejectionReason}
-                onChange={(e) => setStatusForm((p) => ({ ...p, rejectionReason: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            )}
-
             <button
               type="submit"
               disabled={statusLoading || !statusForm.status}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
               {statusLoading ? 'Updating...' : 'Update status'}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Assign technician — Admin only */}
-      {isAdmin && !ticket.assignedTechnicianId && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">Assign technician</h2>
-          <form onSubmit={handleAssign} className="flex gap-3 flex-wrap">
-            <input
-              type="text"
-              placeholder="Technician ID"
-              value={assignForm.technicianId}
-              onChange={(e) => setAssignForm((p) => ({ ...p, technicianId: e.target.value }))}
-              className="flex-1 min-w-[140px] border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="text"
-              placeholder="Technician name"
-              value={assignForm.technicianName}
-              onChange={(e) => setAssignForm((p) => ({ ...p, technicianName: e.target.value }))}
-              className="flex-1 min-w-[140px] border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              type="submit"
-              disabled={assignLoading || !assignForm.technicianId || !assignForm.technicianName}
-              className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {assignLoading ? 'Assigning...' : 'Assign'}
             </button>
           </form>
         </div>
