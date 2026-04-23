@@ -34,7 +34,7 @@ public class BookingController {
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<ApiResponse<BookingResponse>> createBooking(
             @Valid @RequestBody CreateBookingRequest request,
             @AuthenticationPrincipal OAuth2User principal
@@ -47,7 +47,7 @@ public class BookingController {
     }
 
     @GetMapping("/my")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<ApiResponse<Page<BookingResponse>>> getMyBookings(
             @AuthenticationPrincipal OAuth2User principal,
             @RequestParam(defaultValue = "0") int page,
@@ -61,23 +61,12 @@ public class BookingController {
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Page<BookingResponse>>> getAllBookings(
-            @AuthenticationPrincipal OAuth2User principal,
             @RequestParam(required = false) BookingStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        String userId = principal.getAttribute("sub");
-
-        User user = userRepository.findByGoogleId(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (user.getRole() != User.Role.ADMIN) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Only admins can view all bookings"));
-        }
-
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<BookingResponse> response = bookingService.getAllBookings(status, pageable);
 
@@ -92,43 +81,21 @@ public class BookingController {
     }
 
     @PatchMapping("/{id}/approve")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<BookingResponse>> approveBooking(
             @PathVariable Long id,
-            @RequestBody(required = false) BookingDecisionRequest request,
-            @AuthenticationPrincipal OAuth2User principal
+            @RequestBody(required = false) BookingDecisionRequest request
     ) {
-        String userId = principal.getAttribute("sub");
-
-        User user = userRepository.findByGoogleId(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (user.getRole() != User.Role.ADMIN) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Only admins can approve bookings"));
-        }
-
         BookingResponse response = bookingService.approveBooking(id, request);
         return ResponseEntity.ok(ApiResponse.success("Booking approved successfully", response));
     }
 
     @PatchMapping("/{id}/reject")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<BookingResponse>> rejectBooking(
             @PathVariable Long id,
-            @RequestBody(required = false) BookingDecisionRequest request,
-            @AuthenticationPrincipal OAuth2User principal
+            @RequestBody(required = false) BookingDecisionRequest request
     ) {
-        String userId = principal.getAttribute("sub");
-
-        User user = userRepository.findByGoogleId(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (user.getRole() != User.Role.ADMIN) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Only admins can reject bookings"));
-        }
-
         BookingResponse response = bookingService.rejectBooking(id, request);
         return ResponseEntity.ok(ApiResponse.success("Booking rejected successfully", response));
     }
