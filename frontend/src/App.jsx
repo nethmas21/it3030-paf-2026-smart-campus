@@ -107,6 +107,7 @@ function Navbar() {
     if (to === '/resources') return location.pathname.startsWith('/resources');
     if (to === '/bookings/my') return location.pathname.startsWith('/bookings');
     if (to === '/admin/bookings') return location.pathname.startsWith('/admin/bookings');
+    if (to === '/admin/resources') return location.pathname.startsWith('/admin/resources');
     if (to === '/admin') return location.pathname === '/admin';
     return location.pathname === to;
   };
@@ -141,6 +142,12 @@ function Navbar() {
 
           {isAdmin && (
             <>
+              <a
+                href="/admin/resources"
+                className={isActive('/admin/resources') ? 'nav-link-active' : 'nav-link-admin'}
+              >
+                Manage Resources
+              </a>
               <a
                 href="/admin/bookings"
                 className={isActive('/admin/bookings') ? 'nav-link-active' : 'nav-link-admin'}
