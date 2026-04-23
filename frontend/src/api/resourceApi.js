@@ -36,12 +36,9 @@ export const resourceApi = {
 
     if (!response.ok) {
       const errorData = await response.json();
-      const message =
-        errorData.message ||
-        errorData.error ||
-        errorData.availabilityWindows ||
-        JSON.stringify(errorData);
-      throw new Error(message);
+      const error = new Error(errorData.message || "Failed to create resource");
+      error.response = { data: errorData };
+      throw error;
     }
 
     return response.json();
@@ -53,12 +50,9 @@ export const resourceApi = {
 
     if (!response.ok) {
       const errorData = await response.json();
-      const message =
-        errorData.message ||
-        errorData.error ||
-        errorData.availabilityWindows ||
-        JSON.stringify(errorData);
-      throw new Error(message);
+      const error = new Error(errorData.message || "Failed to update resource");
+      error.response = { data: errorData };
+      throw error;
     }
 
     return response.json();

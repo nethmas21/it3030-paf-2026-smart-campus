@@ -41,17 +41,23 @@ public class GlobalExceptionHandler {
 
     // Handles @Valid annotation failures — returns field-level errors
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidation(
+    public ResponseEntity<Object> handleValidation(
             MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
+        Map<String, String> fieldErrors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach(error -> {
             String fieldName = ((FieldError) error).getField();
             String message   = error.getDefaultMessage();
-            errors.put(fieldName, message);
+            fieldErrors.put(fieldName, message);
         });
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", "Validation failed");
+        response.put("fieldErrors", fieldErrors);
+        
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Validation failed"));
+                .body(response);
     }
 
     // Fix: PAYLOAD_TOO_LARGE deprecated in Spring Boot 3 — use HttpStatus.valueOf(413)
