@@ -20,7 +20,14 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(name = "password_hash")
+    private String passwordHash;
+
     private String picture;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false)
+    private AuthProvider authProvider = AuthProvider.GOOGLE;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -38,6 +45,10 @@ public class User {
         USER, ADMIN, TECHNICIAN
     }
 
+    public enum AuthProvider {
+        GOOGLE, LOCAL
+    }
+
     public User() {}
 
     public String getGoogleId() { return googleId; }
@@ -49,8 +60,14 @@ public class User {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+
     public String getPicture() { return picture; }
     public void setPicture(String picture) { this.picture = picture; }
+
+    public AuthProvider getAuthProvider() { return authProvider; }
+    public void setAuthProvider(AuthProvider authProvider) { this.authProvider = authProvider; }
 
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }

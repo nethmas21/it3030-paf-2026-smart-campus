@@ -1,30 +1,47 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.request.LoginRequest;
+import com.example.demo.dto.request.RegisterRequest;
 import com.example.demo.dto.response.ApiResponse;
+import com.example.demo.dto.response.AuthResponse;
+import com.example.demo.dto.response.UserProfileResponse;
+import com.example.demo.dto.response.UserResponse;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.service.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
     private final UserRepository userRepository;
+    private final AuthService authService;
 
-    public AuthController(UserRepository userRepository) {
+    public AuthController(UserRepository userRepository, AuthService authService) {
         this.userRepository = userRepository;
+        this.authService = authService;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Registration successful", authService.register(request)));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Login successful", authService.login(request)));
     }
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUser(
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getCurrentUser(
             @AuthenticationPrincipal OAuth2User principal) {
 
         if (principal == null) {
@@ -37,74 +54,26 @@ public class AuthController {
         String name     = principal.getAttribute("name");
         String picture  = principal.getAttribute("picture");
 
-        // Find or create user in database
-        User user = userRepository.findByGoogleId(googleId).orElseGet(() -> {
-            User newUser = new User();
-            newUser.setGoogleId(googleId);
-            newUser.setEmail(email);
-            newUser.setName(name);
-            newUser.setPicture(picture);
-            newUser.setRole(User.Role.USER); // default role
-            return userRepository.save(newUser);
-        });
+        User user = userRepository.findByGoogleId(googleId)
+                .orElseGet(() -> authService.syncOAuthUser(googleId, email, name, picture));
 
-        // Update name/picture if changed
-        if (!name.equals(user.getName()) || !picture.equals(user.getPicture())) {
-            user.setName(name);
-            user.setPicture(picture);
-            userRepository.save(user);
-        }
-
-        Map<String, Object> userInfo = new HashMap<>();
-        userInfo.put("sub",     googleId);
-        userInfo.put("name",    name);
-        userInfo.put("email",   email);
-        userInfo.put("picture", picture);
-        userInfo.put("roles",   List.of(user.getRole().name()));
-
-        return ResponseEntity.ok(ApiResponse.success(userInfo));
+        return ResponseEntity.ok(ApiResponse.success(authService.getCurrentUserProfile(user)));
     }
 
     // Admin can update user role
     @PatchMapping("/users/{googleId}/role")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<String>> updateRole(
             @PathVariable String googleId,
-            @RequestParam String role,
-            @AuthenticationPrincipal OAuth2User principal) {
-
-        // Check if requester is admin
-        String requesterId = principal.getAttribute("sub");
-        User requester = userRepository.findByGoogleId(requesterId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (requester.getRole() != User.Role.ADMIN) {
-            return ResponseEntity.status(403)
-                    .body(ApiResponse.error("Only admins can change roles"));
-        }
-
-        User target = userRepository.findByGoogleId(googleId)
-                .orElseThrow(() -> new RuntimeException("Target user not found"));
-
-        target.setRole(User.Role.valueOf(role.toUpperCase()));
-        userRepository.save(target);
-
+            @RequestParam String role) {
+        authService.updateRole(googleId, role);
         return ResponseEntity.ok(ApiResponse.success("Role updated to " + role, null));
     }
 
     // Get all users (admin only)
     @GetMapping("/users")
-    public ResponseEntity<ApiResponse<List<User>>> getAllUsers(
-            @AuthenticationPrincipal OAuth2User principal) {
-
-        String googleId = principal.getAttribute("sub");
-        User requester = userRepository.findByGoogleId(googleId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (requester.getRole() != User.Role.ADMIN) {
-            return ResponseEntity.status(403)
-                    .body(ApiResponse.error("Only admins can view all users"));
-        }
-
-        return ResponseEntity.ok(ApiResponse.success(userRepository.findAll()));
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
+        return ResponseEntity.ok(ApiResponse.success(authService.getAllUsers()));
     }
 }

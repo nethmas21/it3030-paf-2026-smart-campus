@@ -1,5 +1,15 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useSearchParams,
+  useLocation,
+} from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import NotificationPanel from './components/notifications/NotificationPanel';
 
 import TicketListPage from './pages/tickets/TicketListPage';
 import TicketDetailPage from './pages/tickets/TicketDetailPage';
@@ -9,14 +19,13 @@ import ResourceListPage from './pages/resources/ResourceListPage';
 import ResourceDetailPage from './pages/resources/ResourceDetailPage';
 import AdminResourcePage from './pages/resources/AdminResourcePage';
 
-import DashboardPage from './pages/dashboard/DashboardPage';
-import AdminPage from './pages/admin/AdminPage';
-
 import CreateBookingPage from './pages/bookings/CreateBookingPage';
 import MyBookingsPage from './pages/bookings/MyBookingsPage';
 import AdminBookingsPage from './pages/bookings/AdminBookingsPage';
 
-// ── Loading screen ────────────────────────────────────────────────────────────
+import DashboardPage from './pages/dashboard/DashboardPage';
+import AdminPage from './pages/admin/AdminPage';
+
 function LoadingScreen() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -28,72 +37,181 @@ function LoadingScreen() {
   );
 }
 
-// ── Protected Route ───────────────────────────────────────────────────────────
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useAuth();
 
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
 
+  const roles = user.roles || [];
+  const canAccess = !allowedRoles || allowedRoles.some((role) => roles.includes(role));
+  if (!canAccess) return <Navigate to="/dashboard" replace />;
+
   return children;
 }
 
-// ── Login Page ────────────────────────────────────────────────────────────────
-function LoginPage() {
+function OAuthCallbackPage() {
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const { completeOAuthLogin } = useAuth();
+
+  useEffect(() => {
+    const token = params.get('token');
+    if (!token) {
+      navigate('/login?error=true', { replace: true });
+      return;
+    }
+
+    completeOAuthLogin(token)
+      .then(() => navigate('/dashboard', { replace: true }))
+      .catch(() => navigate('/login?error=true', { replace: true }));
+  }, [completeOAuthLogin, navigate, params]);
+
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary-100 rounded-full opacity-40 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent-100 rounded-full opacity-30 blur-3xl" />
-      </div>
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 text-sm text-gray-500">
+      Completing sign in...
+    </div>
+  );
+}
 
-      <div className="relative w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-600 rounded-2xl shadow-card mb-5">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-              />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Smart Campus</h1>
-          <p className="text-sm text-slate-500 mt-1.5">Operations Hub</p>
-        </div>
+function LoginPage() {
+  const { login, loginWithCredentials, registerWithCredentials } = useAuth();
+  const hasError = new URLSearchParams(window.location.search).has('error');
+  const [mode, setMode] = useState('login');
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
-        <div className="card shadow-lifted">
-          <h2 className="text-base font-semibold text-slate-800 mb-1">Sign in to continue</h2>
-          <p className="text-sm text-slate-500 mb-6">Use your Google account to access the platform</p>
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+  };
 
-          <a
-            href="http://localhost:8081/oauth2/authorization/google"
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all duration-150 shadow-soft"
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setMessage('');
+
+    try {
+      if (mode === 'register') {
+        await registerWithCredentials(form);
+      } else {
+        await loginWithCredentials({ email: form.email, password: form.password });
+      }
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Authentication failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-10 max-w-md w-full">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Smart Campus</h1>
+        <p className="text-sm text-gray-500 mb-6">Sign in to manage facilities and incidents</p>
+
+        <div className="grid grid-cols-2 gap-2 mb-6 rounded-lg bg-gray-100 p-1">
+          <button
+            type="button"
+            onClick={() => setMode('login')}
+            className={`px-3 py-2 text-sm rounded-md ${mode === 'login' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
           >
-            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-            </svg>
-            Continue with Google
-          </a>
+            Login
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('register')}
+            className={`px-3 py-2 text-sm rounded-md ${mode === 'register' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+          >
+            Register
+          </button>
         </div>
 
-        <p className="text-center text-xs text-slate-400 mt-6">
-          Smart Campus Operations Hub &mdash; &copy; 2026
-        </p>
+        {hasError && (
+          <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            Sign in failed. Please try again.
+          </p>
+        )}
+
+        {message && (
+          <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {message}
+          </p>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'register' && (
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Full name"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          )}
+
+          <input
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="Email"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+
+          <input
+            type="password"
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            placeholder="Password"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            required
+            minLength={8}
+          />
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full px-5 py-3 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+          >
+            {submitting ? 'Please wait...' : mode === 'register' ? 'Create account' : 'Login'}
+          </button>
+        </form>
+
+        <div className="my-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs text-gray-400 uppercase">or</span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <button
+          type="button"
+          onClick={login}
+          className="w-full flex items-center justify-center gap-3 px-5 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+        >
+          <img src="https://www.google.com/favicon.ico" alt="" className="w-4 h-4" />
+          Continue with Google
+        </button>
       </div>
     </div>
   );
 }
 
-// ── Navbar ────────────────────────────────────────────────────────────────────
 function Navbar() {
   const { user, logout } = useAuth();
   const location = useLocation();
+
   const isAdmin = user?.roles?.includes('ADMIN');
+  const isUser = user?.roles?.includes('USER');
+  const canCreateTickets = isUser || isAdmin;
+  const canCreateBookings = isUser || isAdmin;
 
   const links = [
     { to: '/dashboard', label: 'Dashboard' },
@@ -113,9 +231,9 @@ function Navbar() {
   };
 
   return (
-    <nav className="navbar">
-      <div className="navbar-inner">
-        <a href="/dashboard" className="navbar-brand flex items-center gap-2.5">
+    <nav className="bg-white border-b border-gray-100 px-6 py-3 sticky top-0 z-10">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <a href="/dashboard" className="text-base font-bold text-gray-900 flex items-center gap-2.5">
           <div className="w-7 h-7 bg-primary-600 rounded-lg flex items-center justify-center shrink-0">
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -129,34 +247,52 @@ function Navbar() {
           <span>Smart Campus</span>
         </a>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           {links.map((link) => (
             <a
               key={link.to}
               href={link.to}
-              className={isActive(link.to) ? 'nav-link-active' : 'nav-link'}
+              className={isActive(link.to) ? 'px-3 py-2 text-sm rounded-lg bg-slate-100 text-slate-900 font-medium' : 'px-3 py-2 text-sm rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50'}
             >
               {link.label}
             </a>
           ))}
 
+          {canCreateTickets && (
+            <a
+              href="/tickets/new"
+              className={location.pathname === '/tickets/new' ? 'px-3 py-2 text-sm rounded-lg bg-slate-100 text-slate-900 font-medium' : 'px-3 py-2 text-sm rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50'}
+            >
+              New Ticket
+            </a>
+          )}
+
+          {canCreateBookings && (
+            <a
+              href="/bookings/new"
+              className={location.pathname === '/bookings/new' ? 'px-3 py-2 text-sm rounded-lg bg-slate-100 text-slate-900 font-medium' : 'px-3 py-2 text-sm rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50'}
+            >
+              New Booking
+            </a>
+          )}
+
           {isAdmin && (
             <>
               <a
                 href="/admin/resources"
-                className={isActive('/admin/resources') ? 'nav-link-active' : 'nav-link-admin'}
+                className={isActive('/admin/resources') ? 'px-3 py-2 text-sm rounded-lg bg-purple-50 text-purple-700 font-medium' : 'px-3 py-2 text-sm rounded-lg text-purple-600 hover:text-purple-800 hover:bg-purple-50'}
               >
                 Manage Resources
               </a>
               <a
                 href="/admin/bookings"
-                className={isActive('/admin/bookings') ? 'nav-link-active' : 'nav-link-admin'}
+                className={isActive('/admin/bookings') ? 'px-3 py-2 text-sm rounded-lg bg-purple-50 text-purple-700 font-medium' : 'px-3 py-2 text-sm rounded-lg text-purple-600 hover:text-purple-800 hover:bg-purple-50'}
               >
                 Manage Bookings
               </a>
               <a
                 href="/admin"
-                className={isActive('/admin') ? 'nav-link-active' : 'nav-link-admin'}
+                className={isActive('/admin') ? 'px-3 py-2 text-sm rounded-lg bg-purple-50 text-purple-700 font-medium' : 'px-3 py-2 text-sm rounded-lg text-purple-600 hover:text-purple-800 hover:bg-purple-50'}
               >
                 Admin
               </a>
@@ -165,16 +301,18 @@ function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
+          <NotificationPanel />
           {user?.picture && (
-            <img src={user.picture} alt={user.name} className="avatar avatar-sm" />
+            <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
           )}
           <div className="hidden md:block text-right">
             <p className="text-xs font-semibold text-slate-800 leading-none">{user?.name}</p>
             <p className="text-xs text-slate-400 mt-0.5 leading-none">{user?.roles?.[0]}</p>
           </div>
           <button
+            type="button"
             onClick={logout}
-            className="btn-ghost btn-sm text-slate-500 hover:text-danger-600 hover:bg-danger-50"
+            className="px-3 py-2 text-sm rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50"
           >
             Sign out
           </button>
@@ -184,7 +322,6 @@ function Navbar() {
   );
 }
 
-// ── App Layout ────────────────────────────────────────────────────────────────
 function AppLayout({ children }) {
   return (
     <div className="min-h-screen bg-slate-50">
@@ -194,13 +331,13 @@ function AppLayout({ children }) {
   );
 }
 
-// ── Root ──────────────────────────────────────────────────────────────────────
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
           <Route
             path="/*"
             element={
@@ -211,18 +348,53 @@ export default function App() {
                     <Route path="/dashboard" element={<DashboardPage />} />
 
                     <Route path="/tickets" element={<TicketListPage />} />
-                    <Route path="/tickets/new" element={<CreateTicketPage />} />
+                    <Route
+                      path="/tickets/new"
+                      element={
+                        <ProtectedRoute allowedRoles={['USER', 'ADMIN']}>
+                          <CreateTicketPage />
+                        </ProtectedRoute>
+                      }
+                    />
                     <Route path="/tickets/:id" element={<TicketDetailPage />} />
 
                     <Route path="/resources" element={<ResourceListPage />} />
                     <Route path="/resources/:id" element={<ResourceDetailPage />} />
-                    <Route path="/admin/resources" element={<AdminResourcePage />} />
+                    <Route
+                      path="/admin/resources"
+                      element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                          <AdminResourcePage />
+                        </ProtectedRoute>
+                      }
+                    />
 
-                    <Route path="/bookings/new" element={<CreateBookingPage />} />
+                    <Route
+                      path="/bookings/new"
+                      element={
+                        <ProtectedRoute allowedRoles={['USER', 'ADMIN']}>
+                          <CreateBookingPage />
+                        </ProtectedRoute>
+                      }
+                    />
                     <Route path="/bookings/my" element={<MyBookingsPage />} />
-                    <Route path="/admin/bookings" element={<AdminBookingsPage />} />
+                    <Route
+                      path="/admin/bookings"
+                      element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                          <AdminBookingsPage />
+                        </ProtectedRoute>
+                      }
+                    />
 
-                    <Route path="/admin" element={<AdminPage />} />
+                    <Route
+                      path="/admin"
+                      element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                          <AdminPage />
+                        </ProtectedRoute>
+                      }
+                    />
                   </Routes>
                 </AppLayout>
               </ProtectedRoute>
