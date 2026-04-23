@@ -25,6 +25,7 @@ const STATS_CONFIG = [
 export default function TicketListPage() {
   const { user } = useAuth();
   const isAdmin  = user?.roles?.includes('ADMIN');
+  const canCreateTickets = user?.roles?.includes('USER') || isAdmin;
 
   const [tickets, setTickets]       = useState([]);
   const [allTickets, setAllTickets] = useState([]);
@@ -104,12 +105,14 @@ export default function TicketListPage() {
             {isAdmin ? 'View and manage all incident tickets' : 'Track your submitted issues'}
           </p>
         </div>
-        <Link
-          to="/tickets/new"
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          + New ticket
-        </Link>
+        {canCreateTickets && (
+          <Link
+            to="/tickets/new"
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            + New ticket
+          </Link>
+        )}
       </div>
 
       {/* Stats row */}
