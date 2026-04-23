@@ -44,10 +44,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private void authenticate(String token) {
-        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            return;
-        }
-
         Map<String, Object> claims = jwtService.validateToken(token);
         String userId = (String) claims.get("sub");
         User user = userRepository.findByGoogleId(userId)
@@ -64,6 +60,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         DefaultOAuth2User principal = new DefaultOAuth2User(authorities, attributes, "sub");
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(principal, null, authorities);
+        SecurityContextHolder.clearContext();
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 }
