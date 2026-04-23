@@ -1,36 +1,43 @@
 import React, { useState } from 'react';
 
-const ResourceFilter = ({ onFilter }) => {
-  const [filters, setFilters] = useState({
-    type: '',
-    location: '',
-    minCapacity: '',
-    status: ''
-  });
+// Member 1 - Peshan Pasindu
+// ResourceFilter Component - Filter bar for campus resources
 
-  const handleChange = (e) => {
-    const updated = { ...filters, [e.target.name]: e.target.value };
-    setFilters(updated);
-    onFilter(updated);
+const ResourceFilter = ({ onFilter }) => {
+
+  const [type, setType] = useState('');
+  const [location, setLocation] = useState('');
+  const [minCapacity, setMinCapacity] = useState('');
+  const [status, setStatus] = useState('');
+
+  const handleSearch = () => {
+    // Build filters object - only include non-empty values
+    const filters = {};
+    if (type) filters.type = type;
+    if (location.trim()) filters.location = location.trim();
+    if (minCapacity) filters.minCapacity = parseInt(minCapacity, 10);
+    if (status) filters.status = status;
+    onFilter(filters);
   };
 
   const handleReset = () => {
-    const empty = { type: '', location: '', minCapacity: '', status: '' };
-    setFilters(empty);
-    onFilter(empty);
+    setType('');
+    setLocation('');
+    setMinCapacity('');
+    setStatus('');
+    onFilter({});
   };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
       <h3 className="text-sm font-semibold text-gray-600 mb-3">🔍 Filter Resources</h3>
-      
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        
-        {/* Type filter */}
+
+        {/* Type dropdown */}
         <select
-          name="type"
-          value={filters.type}
-          onChange={handleChange}
+          value={type}
+          onChange={(e) => setType(e.target.value)}
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
         >
           <option value="">All Types</option>
@@ -40,31 +47,29 @@ const ResourceFilter = ({ onFilter }) => {
           <option value="EQUIPMENT">Equipment</option>
         </select>
 
-        {/* Location filter */}
+        {/* Location input */}
         <input
           type="text"
-          name="location"
-          value={filters.location}
-          onChange={handleChange}
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
           placeholder="Location..."
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
         />
 
-        {/* Capacity filter */}
+        {/* Min Capacity input */}
         <input
           type="number"
-          name="minCapacity"
-          value={filters.minCapacity}
-          onChange={handleChange}
+          value={minCapacity}
+          onChange={(e) => setMinCapacity(e.target.value)}
           placeholder="Min capacity..."
+          min="1"
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
         />
 
-        {/* Status filter */}
+        {/* Status dropdown */}
         <select
-          name="status"
-          value={filters.status}
-          onChange={handleChange}
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
         >
           <option value="">All Status</option>
@@ -73,13 +78,21 @@ const ResourceFilter = ({ onFilter }) => {
         </select>
       </div>
 
-      {/* Reset button */}
-      <button
-        onClick={handleReset}
-        className="mt-3 text-xs text-blue-500 hover:underline"
-      >
-        Reset Filters
-      </button>
+      {/* Search and Reset buttons */}
+      <div className="flex gap-3 mt-3 items-center">
+        <button
+          onClick={handleSearch}
+          className="bg-blue-500 text-white text-xs px-4 py-1.5 rounded-lg hover:bg-blue-600 transition font-medium"
+        >
+          🔍 Search
+        </button>
+        <button
+          onClick={handleReset}
+          className="text-xs text-gray-500 hover:text-red-500 transition"
+        >
+          Reset Filters
+        </button>
+      </div>
     </div>
   );
 };

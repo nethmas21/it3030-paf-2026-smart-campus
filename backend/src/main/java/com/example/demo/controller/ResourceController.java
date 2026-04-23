@@ -29,6 +29,9 @@ public class ResourceController {
             @RequestParam(required = false) ResourceStatus status) {
 
         if (type != null || location != null || minCapacity != null || status != null) {
+            if (location != null) {
+                location = location.trim();
+            }
             return ResponseEntity.ok(
                 resourceService.searchResources(type, location, minCapacity, status)
             );
