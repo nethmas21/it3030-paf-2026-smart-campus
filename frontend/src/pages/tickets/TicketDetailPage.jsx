@@ -9,13 +9,13 @@ import TicketStatusBadge from '../../components/tickets/TicketStatusBadge';
 import PriorityBadge from '../../components/tickets/PriorityBadge';
 import CommentSection from '../../components/tickets/CommentSection';
 
-const NEXT_STATUSES = {
-  OPEN:        ['IN_PROGRESS', 'REJECTED'],
-  IN_PROGRESS: ['RESOLVED', 'REJECTED'],
-  RESOLVED:    ['CLOSED'],
-  CLOSED:      [],
-  REJECTED:    [],
-};
+const ALL_STATUSES = [
+  'OPEN',
+  'IN_PROGRESS',
+  'RESOLVED',
+  'REJECTED',
+  'CLOSED',
+];
 
 export default function TicketDetailPage() {
   const { id }   = useParams();
@@ -127,7 +127,7 @@ export default function TicketDetailPage() {
     );
   }
 
-  const nextStatuses = NEXT_STATUSES[ticket.status] || [];
+  
   const canAddMore   = (ticket.attachmentPaths?.length || 0) < 3;
   const isTerminal   = ticket.status === 'CLOSED' || ticket.status === 'REJECTED';
 
@@ -266,9 +266,11 @@ export default function TicketDetailPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select new status</option>
-                  {nextStatuses.map((s) => (
-                    <option key={s} value={s}>{s.replace('_', ' ')}</option>
-                  ))}
+                  {ALL_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                      {s.replace('_', ' ')}
+                  </option>
+                ))}
                 </select>
 
                 {statusForm.status === 'RESOLVED' && (
@@ -349,7 +351,7 @@ export default function TicketDetailPage() {
       )}
 
       {/* Technician status update (non-admin) */}
-      {!isAdmin && isTech && nextStatuses.length > 0 && (
+      {!isAdmin && isTech && ALL_STATUSES.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-3">Update Status</h2>
           <form onSubmit={handleStatusUpdate} className="space-y-3">
@@ -359,8 +361,10 @@ export default function TicketDetailPage() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select new status</option>
-              {nextStatuses.map((s) => (
-                <option key={s} value={s}>{s.replace('_', ' ')}</option>
+              {ALL_STATUSES.map((s) => (
+              <option key={s} value={s}>
+              {s.replace('_', ' ')}
+               </option>
               ))}
             </select>
             {statusForm.status === 'RESOLVED' && (
