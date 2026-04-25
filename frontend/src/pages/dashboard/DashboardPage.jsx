@@ -58,42 +58,61 @@ export default function DashboardPage() {
   };
 
   const StatCard = ({ label, value, tone = 'slate' }) => (
-    <div className={`rounded-xl border px-5 py-4 shadow-soft transition hover:shadow-card ${tones[tone]}`}>
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-        {label}
-      </p>
-      <p className="mt-2 text-3xl font-bold">{value}</p>
-    </div>
-  );
+  <div
+    className={`relative overflow-hidden rounded-2xl border px-6 py-5 shadow-soft transition-all duration-200 hover:shadow-lifted hover:-translate-y-0.5 ${tones[tone]}`}
+  >
+    <div className="absolute inset-0 opacity-40 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
 
-  const SummaryCard = ({ title, manageTo, children }) => (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft transition hover:shadow-card">
-      <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 className="text-sm font-bold text-slate-800">{title}</h3>
-        <Link to={manageTo} className="text-xs font-semibold text-primary-600 hover:text-primary-700">
-          Manage
-        </Link>
-      </div>
-      {children}
+    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+      {label}
+    </p>
+
+    <p className="mt-3 text-3xl font-bold tracking-tight">
+      {value}
+    </p>
+  </div>
+);
+
+ const SummaryCard = ({ title, manageTo, children }) => (
+  <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft transition hover:shadow-card">
+    <div className="mb-4 flex items-center justify-between">
+      <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
+
+      <Link
+        to={manageTo}
+        className="text-xs font-semibold text-primary-600 hover:text-primary-700 transition"
+      >
+        Manage →
+      </Link>
     </div>
-  );
+
+    {children}
+  </div>
+);
 
   const MiniMetric = ({ label, value, tone = 'slate' }) => (
-    <div className={`rounded-lg border px-3 py-3 ${tones[tone]}`}>
-      <p className="text-xs font-semibold text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold">{value}</p>
-    </div>
-  );
+  <div
+    className={`rounded-xl border px-4 py-4 transition ${tones[tone]} hover:shadow-soft`}
+  >
+    <p className="text-xs font-medium text-slate-500">{label}</p>
+    <p className="mt-2 text-2xl font-bold">{value}</p>
+  </div>
+);
 
   const ActionCard = ({ to, title, description }) => (
-    <Link
-      to={to}
-      className="rounded-lg border border-slate-200 bg-white p-4 transition hover:border-primary-200 hover:bg-primary-50/40 hover:shadow-soft"
-    >
-      <p className="text-sm font-bold text-slate-900">{title}</p>
-      <p className="mt-1 text-xs text-slate-500">{description}</p>
-    </Link>
-  );
+  <Link
+    to={to}
+    className="group rounded-xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:border-primary-200 hover:bg-primary-50/40 hover:shadow-card"
+  >
+    <p className="text-sm font-semibold text-slate-900 group-hover:text-primary-700">
+      {title}
+    </p>
+
+    <p className="mt-2 text-xs text-slate-500">
+      {description}
+    </p>
+  </Link>
+);
 
   if (loading) {
     return (

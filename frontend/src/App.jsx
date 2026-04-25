@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   BrowserRouter,
   Routes,
@@ -7,6 +7,7 @@ import {
   useNavigate,
   useSearchParams,
   useLocation,
+  Link
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import NotificationPanel from './components/notifications/NotificationPanel';
@@ -214,121 +215,137 @@ function Navbar() {
   const { user, logout } = useAuth();
   const location = useLocation();
 
-  const isAdmin = user?.roles?.includes('ADMIN');
+  const isAdmin = user?.roles?.includes("ADMIN");
 
-  const links = [
-    { to: '/dashboard', label: 'Dashboard' },
-    { to: '/tickets', label: 'Tickets' },
-    { to: '/resources', label: 'Resources' },
-    { to: '/bookings/my', label: 'Bookings' },
-  ];
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const menuRef = useRef();
 
-  const isActive = (to) => {
-    if (to === '/tickets') return location.pathname.startsWith('/tickets');
-    if (to === '/resources') return location.pathname.startsWith('/resources');
-    if (to === '/bookings/my') return location.pathname.startsWith('/bookings');
-    if (to === '/admin/bookings') return location.pathname.startsWith('/admin/bookings');
-    if (to === '/admin/resources') return location.pathname.startsWith('/admin/resources');
-    if (to === '/admin') return location.pathname === '/admin';
-    return location.pathname === to;
-  };
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (!menuRef.current?.contains(e.target)) {
+        setMenuOpen(false);
+        setAdminOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
-  const baseLink =
-    'px-3 py-2 text-sm rounded-lg font-medium transition-colors';
+  const isActive = (to) => location.pathname.startsWith(to);
 
-  const mainLinkClass = (to) =>
-    isActive(to)
-      ? `${baseLink} bg-slate-100 text-slate-950`
-      : `${baseLink} text-slate-500 hover:text-slate-900 hover:bg-slate-50`;
-
-  const adminLinkClass = (to) =>
-    isActive(to)
-      ? `${baseLink} bg-primary-50 text-primary-700`
-      : `${baseLink} text-primary-600 hover:text-primary-700 hover:bg-primary-50/70`;
+  const navLink = (to, label) => (
+    <Link
+      to={to}
+      className={`px-3 py-2 text-sm font-medium rounded-lg transition
+        ${
+          isActive(to)
+            ? "bg-primary-50 text-primary-700"
+            : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+        }`}
+    >
+      {label}
+    </Link>
+  );
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur shadow-soft">
-      <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between gap-6 px-8">
+    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-lg shadow-soft">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
 
-        {/* Brand */}
-        <a href="/dashboard" className="flex shrink-0 items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600 shadow-soft">
-            <svg className="h-4.5 w-4.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-              />
+        {/* LOGO */}
+        <Link to="/dashboard" className="flex items-center gap-3">
+          <div className="h-9 w-9 flex items-center justify-center rounded-xl bg-primary-600 shadow-soft">
+            <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor">
+              <path strokeWidth="2" d="M3 10l9-7 9 7v11a1 1 0 01-1 1h-5V14H9v8H4a1 1 0 01-1-1z"/>
             </svg>
           </div>
-          <span className="text-base font-bold tracking-tight text-slate-950">
-            Smart Campus
+          <span className="font-bold text-slate-900 text-lg">
+            CampusHub
           </span>
-        </a>
+        </Link>
 
-        {/* Links */}
-        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden">
-          <div className="flex items-center gap-1">
-            {links.map((link) => (
-              <a key={link.to} href={link.to} className={mainLinkClass(link.to)}>
-                {link.label}
-              </a>
-            ))}
-          </div>
+        {/* NAV LINKS */}
+        <div className="flex items-center gap-2">
+          {navLink("/dashboard", "Dashboard")}
+          {navLink("/tickets", "Tickets")}
+          {navLink("/resources", "Resources")}
+          {navLink("/bookings/my", "Bookings")}
 
-          {isAdmin && <div className="mx-2 h-6 w-px shrink-0 bg-slate-200" />}
-
+          {/* ADMIN DROPDOWN */}
           {isAdmin && (
-            <div className="flex items-center gap-1">
-              <a href="/admin" className={adminLinkClass('/admin')}>
-                Manage Tickets
-              </a>
-              <a href="/admin/resources" className={adminLinkClass('/admin/resources')}>
-                Manage Resources
-              </a>
-              <a href="/admin/bookings" className={adminLinkClass('/admin/bookings')}>
-                Manage Bookings
-              </a>
+            <div className="relative">
+              <button
+                onClick={() => setAdminOpen(!adminOpen)}
+                className="px-3 py-2 text-sm font-medium rounded-lg text-primary-600 hover:bg-primary-50"
+              >
+                Admin ▾
+              </button>
+
+              {adminOpen && (
+                <div className="absolute mt-2 w-48 rounded-xl border bg-white shadow-card p-2">
+                  <Link to="/admin" className="block px-3 py-2 rounded-lg hover:bg-slate-100">
+                    Manage Tickets
+                  </Link>
+                  <Link to="/admin/resources" className="block px-3 py-2 rounded-lg hover:bg-slate-100">
+                    Manage Resources
+                  </Link>
+                  <Link to="/admin/bookings" className="block px-3 py-2 rounded-lg hover:bg-slate-100">
+                    Manage Bookings
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Right side */}
-        <div className="flex shrink-0 items-center gap-3">
-          <div className="scale-[0.88] origin-right">
-            <NotificationPanel />
-          </div>
+        {/* RIGHT SIDE */}
+        <div className="flex items-center gap-3 relative" ref={menuRef}>
 
-          {user?.picture && (
-            <img
-              src={user.picture}
-              alt={user.name}
-              className="h-8 w-8 rounded-full object-cover ring-2 ring-slate-100"
-            />
-          )}
+          {/* Notifications */}
+          <NotificationPanel />
 
-          <div className="hidden max-w-[130px] text-right lg:block">
-            <p className="truncate text-xs font-semibold leading-tight text-slate-800">
-              {user?.name}
-            </p>
-            <p className="text-[11px] font-medium leading-tight text-slate-400">
-              {user?.roles?.[0]}
-            </p>
-          </div>
-
+          {/* AVATAR */}
           <button
-            type="button"
-            onClick={logout}
-            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-danger-50 hover:text-danger-600"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="flex items-center gap-2 rounded-full hover:bg-slate-100 p-1 transition"
           >
-            Sign out
+            <img
+              src={user?.picture || "https://i.pravatar.cc/40"}
+              alt=""
+              className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200"
+            />
           </button>
+
+          {/* DROPDOWN MENU */}
+          {menuOpen && (
+            <div className="absolute right-0 top-14 w-56 rounded-xl border bg-white shadow-card p-2 animate-fade-in">
+              
+              <div className="px-3 py-2 border-b">
+                <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
+                <p className="text-xs text-slate-500">{user?.roles?.[0]}</p>
+              </div>
+
+              <Link
+                to="/dashboard"
+                className="block px-3 py-2 rounded-lg hover:bg-slate-100 text-sm"
+              >
+                Dashboard
+              </Link>
+
+              <button
+                onClick={logout}
+                className="w-full text-left px-3 py-2 rounded-lg hover:bg-danger-50 text-sm text-danger-600"
+              >
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </nav>
   );
 }
+
 
 function AppLayout({ children }) {
   return (

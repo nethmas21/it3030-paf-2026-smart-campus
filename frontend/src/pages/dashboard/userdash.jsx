@@ -41,20 +41,29 @@ export default function UserDashboard() {
   };
 
   const StatCard = ({ label, value, tone = "slate" }) => (
-    <div className={`rounded-xl border px-5 py-4 shadow-soft ${tones[tone]}`}>
-      <p className="text-xs uppercase font-semibold tracking-wider text-slate-500">
-        {label}
-      </p>
-      <p className="mt-2 text-3xl font-bold">{value}</p>
-    </div>
-  );
+  <div
+    className={`relative overflow-hidden rounded-2xl border px-6 py-5 shadow-soft transition-all duration-200 hover:shadow-lifted hover:-translate-y-0.5 ${tones[tone]}`}
+  >
+    <div className="absolute inset-0 opacity-30 bg-gradient-to-br from-white/40 to-transparent" />
 
-  const Mini = ({ label, value, tone = "slate" }) => (
-    <div className={`rounded-lg border p-3 ${tones[tone]}`}>
-      <p className="text-xs font-semibold text-slate-500">{label}</p>
-      <p className="text-2xl font-bold">{value}</p>
-    </div>
-  );
+    <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500 font-semibold">
+      {label}
+    </p>
+
+    <p className="mt-3 text-3xl font-bold">
+      {value}
+    </p>
+  </div>
+);
+
+ const Mini = ({ label, value, tone = "slate" }) => (
+  <div
+    className={`rounded-xl border px-4 py-4 transition ${tones[tone]} hover:shadow-soft`}
+  >
+    <p className="text-xs text-slate-500">{label}</p>
+    <p className="text-2xl font-bold mt-1">{value}</p>
+  </div>
+);
 
   if (loading) {
     return <div className="p-6 text-slate-500">Loading dashboard...</div>;
@@ -105,25 +114,23 @@ export default function UserDashboard() {
       </div>
 
       {/* ACTIONS */}
-      <div className="border rounded-xl bg-white p-5 shadow-soft">
-        <h3 className="font-semibold mb-3">Quick Actions</h3>
+      <div className="grid md:grid-cols-2 gap-4">
+  <Link
+    className="rounded-xl border p-5 bg-white hover:bg-primary-50 hover:border-primary-200 transition shadow-soft"
+    to="/tickets/new"
+  >
+    <p className="font-semibold text-slate-900">Create Ticket</p>
+    <p className="text-xs text-slate-500 mt-1">Report a new issue</p>
+  </Link>
 
-        <div className="grid md:grid-cols-2 gap-3">
-          <Link
-            className="p-4 border rounded-lg hover:bg-primary-50 transition"
-            to="/tickets/new"
-          >
-            Create Ticket
-          </Link>
-
-          <Link
-            className="p-4 border rounded-lg hover:bg-primary-50 transition"
-            to="/bookings/my"
-          >
-            View My Bookings
-          </Link>
-        </div>
-      </div>
+  <Link
+    className="rounded-xl border p-5 bg-white hover:bg-primary-50 hover:border-primary-200 transition shadow-soft"
+    to="/bookings/my"
+  >
+    <p className="font-semibold text-slate-900">View Bookings</p>
+    <p className="text-xs text-slate-500 mt-1">Track your reservations</p>
+  </Link>
+</div>
 
     </div>
   );
