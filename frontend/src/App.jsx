@@ -232,22 +232,27 @@ function Navbar() {
     return location.pathname === to;
   };
 
+  const baseLink =
+    'px-3 py-2 text-sm rounded-lg font-medium transition-colors';
+
   const mainLinkClass = (to) =>
     isActive(to)
-      ? 'px-2.5 py-1.5 text-sm rounded-lg bg-slate-100 text-slate-900 font-semibold transition'
-      : 'px-2.5 py-1.5 text-sm rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition';
+      ? `${baseLink} bg-slate-100 text-slate-950`
+      : `${baseLink} text-slate-500 hover:text-slate-900 hover:bg-slate-50`;
 
   const adminLinkClass = (to) =>
     isActive(to)
-      ? 'px-2.5 py-1.5 text-sm rounded-lg bg-indigo-50 text-indigo-700 font-semibold transition'
-      : 'px-2.5 py-1.5 text-sm rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition';
+      ? `${baseLink} bg-primary-50 text-primary-700`
+      : `${baseLink} text-primary-600 hover:text-primary-700 hover:bg-primary-50/70`;
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200 shadow-sm">
-      <div className="max-w-[1400px] mx-auto flex items-center justify-between px-8 py-3 whitespace-nowrap">
-        <a href="/dashboard" className="flex items-center gap-2.5 shrink-0">
-          <div className="w-8 h-8 bg-primary-600 rounded-xl flex items-center justify-center shadow-sm">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur shadow-soft">
+      <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between gap-6 px-8">
+
+        {/* Brand */}
+        <a href="/dashboard" className="flex shrink-0 items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600 shadow-soft">
+            <svg className="h-4.5 w-4.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -256,10 +261,13 @@ function Navbar() {
               />
             </svg>
           </div>
-          <span className="text-base font-bold text-slate-900">Smart Campus</span>
+          <span className="text-base font-bold tracking-tight text-slate-950">
+            Smart Campus
+          </span>
         </a>
 
-        <div className="flex items-center gap-3 flex-1 ml-10 overflow-x-auto scrollbar-thin">
+        {/* Links */}
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden">
           <div className="flex items-center gap-1">
             {links.map((link) => (
               <a key={link.to} href={link.to} className={mainLinkClass(link.to)}>
@@ -268,7 +276,7 @@ function Navbar() {
             ))}
           </div>
 
-          {isAdmin && <div className="h-5 w-px bg-slate-200 mx-1" />}
+          {isAdmin && <div className="mx-2 h-6 w-px shrink-0 bg-slate-200" />}
 
           {isAdmin && (
             <div className="flex items-center gap-1">
@@ -285,8 +293,9 @@ function Navbar() {
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="scale-90 origin-right">
+        {/* Right side */}
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="scale-[0.88] origin-right">
             <NotificationPanel />
           </div>
 
@@ -294,21 +303,23 @@ function Navbar() {
             <img
               src={user.picture}
               alt={user.name}
-              className="w-7 h-7 rounded-full object-cover ring-2 ring-slate-100"
+              className="h-8 w-8 rounded-full object-cover ring-2 ring-slate-100"
             />
           )}
 
-          <div className="hidden lg:block text-right">
-            <p className="text-xs font-semibold text-slate-800 leading-tight max-w-[120px] truncate">
+          <div className="hidden max-w-[130px] text-right lg:block">
+            <p className="truncate text-xs font-semibold leading-tight text-slate-800">
               {user?.name}
             </p>
-            <p className="text-[11px] text-slate-400 leading-tight">{user?.roles?.[0]}</p>
+            <p className="text-[11px] font-medium leading-tight text-slate-400">
+              {user?.roles?.[0]}
+            </p>
           </div>
 
           <button
             type="button"
             onClick={logout}
-            className="px-2.5 py-1.5 text-sm rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition"
+            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-danger-50 hover:text-danger-600"
           >
             Sign out
           </button>

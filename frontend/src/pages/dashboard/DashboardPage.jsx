@@ -3,11 +3,8 @@ import { Link } from 'react-router-dom';
 import { getTickets } from '../../api/ticketApi';
 import { resourceApi } from '../../api/resourceApi';
 import { getAllBookings } from '../../api/bookingApi';
-import { useAuth } from '../../context/AuthContext';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
-
   const [tickets, setTickets] = useState([]);
   const [resources, setResources] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -39,7 +36,6 @@ export default function DashboardPage() {
     ['OUT_OF_SERVICE', 'MAINTENANCE'].includes(r.status)
   ).length;
 
-  const totalBookings = bookings.length;
   const pendingBookings = bookings.filter(b => b.status === 'PENDING').length;
   const approvedBookings = bookings.filter(b => b.status === 'APPROVED').length;
   const rejectedBookings = bookings.filter(b => b.status === 'REJECTED').length;
@@ -52,207 +48,204 @@ export default function DashboardPage() {
     .sort((a, b) => new Date(b.createdAt || b.bookingDate) - new Date(a.createdAt || a.bookingDate))
     .slice(0, 5);
 
+  const tones = {
+    slate: 'border-slate-200 bg-white text-slate-900',
+    primary: 'border-primary-100 bg-primary-50/70 text-primary-700',
+    accent: 'border-accent-100 bg-accent-50 text-accent-700',
+    success: 'border-success-100 bg-success-50 text-success-700',
+    warning: 'border-warning-100 bg-warning-50 text-warning-600',
+    danger: 'border-danger-100 bg-danger-50 text-danger-700',
+  };
+
+  const StatCard = ({ label, value, tone = 'slate' }) => (
+    <div className={`rounded-xl border px-5 py-4 shadow-soft transition hover:shadow-card ${tones[tone]}`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-2 text-3xl font-bold">{value}</p>
+    </div>
+  );
+
+  const SummaryCard = ({ title, manageTo, children }) => (
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft transition hover:shadow-card">
+      <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+        <Link to={manageTo} className="text-xs font-semibold text-primary-600 hover:text-primary-700">
+          Manage
+        </Link>
+      </div>
+      {children}
+    </div>
+  );
+
+  const MiniMetric = ({ label, value, tone = 'slate' }) => (
+    <div className={`rounded-lg border px-3 py-3 ${tones[tone]}`}>
+      <p className="text-xs font-semibold text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-bold">{value}</p>
+    </div>
+  );
+
+  const ActionCard = ({ to, title, description }) => (
+    <Link
+      to={to}
+      className="rounded-lg border border-slate-200 bg-white p-4 transition hover:border-primary-200 hover:bg-primary-50/40 hover:shadow-soft"
+    >
+      <p className="text-sm font-bold text-slate-900">{title}</p>
+      <p className="mt-1 text-xs text-slate-500">{description}</p>
+    </Link>
+  );
+
   if (loading) {
     return (
-      <div className="page-wide">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-28 skeleton" />
+            <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100" />
           ))}
         </div>
       </div>
     );
   }
 
-  const StatCard = ({ label, value, icon, color }) => (
-    <div className="stat-card">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="stat-label">{label}</p>
-          <p className={`stat-value ${color}`}>{value}</p>
-        </div>
-        <div className="text-3xl">{icon}</div>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="page-wide">
+    <div className="mx-auto max-w-7xl px-4 py-8">
       {/* Header */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Admin Dashboard</h1>
-          <p className="page-subtitle">
-            Welcome back, {user?.name?.split(' ')[0]} — here is your Smart Campus overview
-          </p>
-        </div>
+      <div className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-600">
+          Admin overview
+        </p>
+        <h1 className="mt-2 text-2xl font-bold text-slate-950">
+          Operations Dashboard
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Monitor tickets, resources, and booking activity across the Smart Campus platform.
+        </p>
       </div>
 
-      {/* Main KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total Tickets" value={totalTickets} icon="🎫" color="text-slate-900" />
-        <StatCard label="Open Tickets" value={openTickets} icon="📌" color="text-primary-600" />
-        <StatCard label="Resources" value={totalResources} icon="🏫" color="text-blue-600" />
-        <StatCard label="Pending Bookings" value={pendingBookings} icon="⏳" color="text-warning-600" />
+      {/* KPI Cards */}
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <StatCard label="Total Tickets" value={totalTickets} tone="slate" />
+        <StatCard label="Open Tickets" value={openTickets} tone="primary" />
+        <StatCard label="Resources" value={totalResources} tone="accent" />
+        <StatCard label="Pending Bookings" value={pendingBookings} tone="warning" />
       </div>
 
-      {/* Module summaries */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
-        {/* Tickets */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Tickets Summary</h3>
-            <Link to="/admin" className="btn-link">Manage</Link>
-          </div>
-
+      {/* Summaries */}
+      <div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <SummaryCard title="Tickets" manageTo="/admin">
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-blue-50 rounded-xl p-3">
-              <p className="text-xs text-blue-600 font-semibold">Open</p>
-              <p className="text-2xl font-bold text-blue-700">{openTickets}</p>
-            </div>
-            <div className="bg-yellow-50 rounded-xl p-3">
-              <p className="text-xs text-yellow-600 font-semibold">Progress</p>
-              <p className="text-2xl font-bold text-yellow-700">{inProgressTickets}</p>
-            </div>
-            <div className="bg-green-50 rounded-xl p-3">
-              <p className="text-xs text-green-600 font-semibold">Resolved</p>
-              <p className="text-2xl font-bold text-green-700">{resolvedTickets}</p>
-            </div>
+            <MiniMetric label="Open" value={openTickets} tone="primary" />
+            <MiniMetric label="Progress" value={inProgressTickets} tone="warning" />
+            <MiniMetric label="Resolved" value={resolvedTickets} tone="success" />
           </div>
-        </div>
+        </SummaryCard>
 
-        {/* Resources */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Resources Summary</h3>
-            <Link to="/admin/resources" className="btn-link">Manage</Link>
-          </div>
-
+        <SummaryCard title="Resources" manageTo="/admin/resources">
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-slate-50 rounded-xl p-3">
-              <p className="text-xs text-slate-500 font-semibold">Total</p>
-              <p className="text-2xl font-bold text-slate-800">{totalResources}</p>
-            </div>
-            <div className="bg-blue-50 rounded-xl p-3">
-              <p className="text-xs text-blue-600 font-semibold">Active</p>
-              <p className="text-2xl font-bold text-blue-700">{activeResources}</p>
-            </div>
-            <div className="bg-red-50 rounded-xl p-3">
-              <p className="text-xs text-red-600 font-semibold">Unavailable</p>
-              <p className="text-2xl font-bold text-red-700">{maintenanceResources}</p>
-            </div>
+            <MiniMetric label="Total" value={totalResources} tone="slate" />
+            <MiniMetric label="Active" value={activeResources} tone="accent" />
+            <MiniMetric label="Down" value={maintenanceResources} tone="danger" />
           </div>
-        </div>
+        </SummaryCard>
 
-        {/* Bookings */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Bookings Summary</h3>
-            <Link to="/admin/bookings" className="btn-link">Manage</Link>
-          </div>
-
+        <SummaryCard title="Bookings" manageTo="/admin/bookings">
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-yellow-50 rounded-xl p-3">
-              <p className="text-xs text-yellow-600 font-semibold">Pending</p>
-              <p className="text-2xl font-bold text-yellow-700">{pendingBookings}</p>
-            </div>
-            <div className="bg-green-50 rounded-xl p-3">
-              <p className="text-xs text-green-600 font-semibold">Approved</p>
-              <p className="text-2xl font-bold text-green-700">{approvedBookings}</p>
-            </div>
-            <div className="bg-red-50 rounded-xl p-3">
-              <p className="text-xs text-red-600 font-semibold">Rejected</p>
-              <p className="text-2xl font-bold text-red-700">{rejectedBookings}</p>
-            </div>
+            <MiniMetric label="Pending" value={pendingBookings} tone="warning" />
+            <MiniMetric label="Approved" value={approvedBookings} tone="success" />
+            <MiniMetric label="Rejected" value={rejectedBookings} tone="danger" />
           </div>
-        </div>
+        </SummaryCard>
       </div>
 
       {/* Quick Actions */}
-      <div className="card mb-6">
-        <div className="card-header">
-          <h3>Quick Actions</h3>
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-soft">
+        <div className="mb-4 border-b border-slate-100 pb-3">
+          <h3 className="text-sm font-bold text-slate-800">Quick Actions</h3>
+          <p className="mt-1 text-xs text-slate-500">Jump directly to the main administrative workflows.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link to="/admin" className="p-4 rounded-xl bg-purple-50 hover:bg-purple-100 transition">
-            <p className="font-bold text-purple-700">🎫 Manage Tickets</p>
-            <p className="text-sm text-purple-500 mt-1">Review and update incident tickets</p>
-          </Link>
-
-          <Link to="/admin/resources" className="p-4 rounded-xl bg-blue-50 hover:bg-blue-100 transition">
-            <p className="font-bold text-blue-700">🏫 Manage Resources</p>
-            <p className="text-sm text-blue-500 mt-1">Add, edit, and monitor campus resources</p>
-          </Link>
-
-          <Link to="/admin/bookings" className="p-4 rounded-xl bg-green-50 hover:bg-green-100 transition">
-            <p className="font-bold text-green-700">📅 Manage Bookings</p>
-            <p className="text-sm text-green-500 mt-1">Approve or reject booking requests</p>
-          </Link>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <ActionCard
+            to="/admin"
+            title="Manage Tickets"
+            description="Review, inspect, and update incident reports."
+          />
+          <ActionCard
+            to="/admin/resources"
+            title="Manage Resources"
+            description="Maintain rooms, labs, venues, and campus assets."
+          />
+          <ActionCard
+            to="/admin/bookings"
+            title="Manage Bookings"
+            description="Approve, reject, and monitor booking requests."
+          />
         </div>
       </div>
 
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Recent Tickets */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Recent Tickets</h3>
-            <Link to="/admin" className="btn-link">View all</Link>
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft">
+          <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 className="text-sm font-bold text-slate-800">Recent Tickets</h3>
+            <Link to="/admin" className="text-xs font-semibold text-primary-600 hover:text-primary-700">
+              View all
+            </Link>
           </div>
 
           {recentTickets.length === 0 ? (
-            <div className="empty-state">
-              <p className="empty-title">No recent tickets</p>
-            </div>
+            <p className="text-sm text-slate-400">No recent tickets</p>
           ) : (
             <div className="space-y-2">
               {recentTickets.map(ticket => (
                 <Link
                   key={ticket.id}
                   to={`/tickets/${ticket.id}`}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 border border-slate-100"
+                  className="flex items-center justify-between rounded-lg border border-slate-100 p-3 transition hover:bg-slate-50"
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{ticket.title}</p>
+                  <div className="min-w-0 pr-3">
+                    <p className="truncate text-sm font-semibold text-slate-800">{ticket.title}</p>
                     <p className="text-xs text-slate-400">
-                      {ticket.category?.replace(/_/g, ' ')}
+                      {ticket.category?.replace(/_/g, ' ') || 'No category'}
                     </p>
                   </div>
-                  <span className="badge-slate">{ticket.status}</span>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                    {ticket.status}
+                  </span>
                 </Link>
               ))}
             </div>
           )}
         </div>
 
-        {/* Recent Bookings */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Recent Bookings</h3>
-            <Link to="/admin/bookings" className="btn-link">View all</Link>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft">
+          <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 className="text-sm font-bold text-slate-800">Recent Bookings</h3>
+            <Link to="/admin/bookings" className="text-xs font-semibold text-primary-600 hover:text-primary-700">
+              View all
+            </Link>
           </div>
 
           {recentBookings.length === 0 ? (
-            <div className="empty-state">
-              <p className="empty-title">No recent bookings</p>
-            </div>
+            <p className="text-sm text-slate-400">No recent bookings</p>
           ) : (
             <div className="space-y-2">
               {recentBookings.map(booking => (
                 <div
                   key={booking.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-slate-100"
+                  className="flex items-center justify-between rounded-lg border border-slate-100 p-3"
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">
+                  <div className="min-w-0 pr-3">
+                    <p className="truncate text-sm font-semibold text-slate-800">
                       Resource #{booking.resourceId}
                     </p>
                     <p className="text-xs text-slate-400">
                       {booking.bookingDate} · {booking.startTime} - {booking.endTime}
                     </p>
                   </div>
-                  <span className="badge-slate">{booking.status}</span>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                    {booking.status}
+                  </span>
                 </div>
               ))}
             </div>
