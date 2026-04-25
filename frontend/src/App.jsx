@@ -24,6 +24,7 @@ import MyBookingsPage from './pages/bookings/MyBookingsPage';
 import AdminBookingsPage from './pages/bookings/AdminBookingsPage';
 
 import DashboardPage from './pages/dashboard/DashboardPage';
+import UserDashboard from './pages/dashboard/userdash';
 import AdminPage from './pages/admin/AdminPage';
 
 function LoadingScreen() {
@@ -338,6 +339,16 @@ function AppLayout({ children }) {
   );
 }
 
+function DashboardRouter() {
+  const { user, loading } = useAuth();
+
+  if (loading) return <LoadingScreen />;
+
+  const isAdmin = user?.roles?.includes('ADMIN');
+
+  return isAdmin ? <DashboardPage /> : <UserDashboard />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -353,7 +364,7 @@ export default function App() {
                 <AppLayout>
                   <Routes>
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/dashboard" element={<DashboardRouter />} />
 
                     <Route path="/tickets" element={<TicketListPage />} />
                     <Route
