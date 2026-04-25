@@ -9,7 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -48,10 +49,11 @@ public class TicketController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TicketResponse>> createTicket(
             @Valid @RequestBody CreateTicketRequest request,
-            @AuthenticationPrincipal OAuth2User principal) {
+            Authentication authentication) {
 
-        String userId = principal.getAttribute("sub");
+        String userId = extractUserId(authentication);
         TicketResponse response = ticketService.createTicket(request, userId);
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Ticket created successfully", response));
@@ -66,10 +68,10 @@ public class TicketController {
             @RequestParam(required = false) TicketPriority priority,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @AuthenticationPrincipal OAuth2User principal) {
+            Authentication authentication) {
 
-        boolean isAdmin = isAdmin(principal);
-        String userId = principal.getAttribute("sub");
+        boolean isAdmin = isAdmin(authentication);
+        String userId = extractUserId(authentication);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<TicketResponse> tickets = isAdmin
@@ -84,11 +86,11 @@ public class TicketController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TicketResponse>> getTicketById(
             @PathVariable Long id,
-            @AuthenticationPrincipal OAuth2User principal) {
+            Authentication authentication) {
 
         TicketResponse ticket = ticketService.getTicketById(id);
-        String userId = principal.getAttribute("sub");
-        boolean isAdmin = isAdmin(principal);
+        String userId = extractUserId(authentication);
+        boolean isAdmin = isAdmin(authentication);
 
         if (!isAdmin && !ticket.getCreatedBy().equals(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -104,10 +106,10 @@ public class TicketController {
     public ResponseEntity<ApiResponse<TicketResponse>> updateStatus(
             @PathVariable Long id,
             @Valid @RequestBody UpdateTicketStatusRequest request,
-            @AuthenticationPrincipal OAuth2User principal) {
+            Authentication authentication) {
 
-        boolean isAdmin = isAdmin(principal);
-        boolean isTech  = isTechnician(principal);
+        boolean isAdmin = isAdmin(authentication);
+        boolean isTech = isTechnician(authentication);
 
         if (!isAdmin && !isTech) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -125,9 +127,9 @@ public class TicketController {
     public ResponseEntity<ApiResponse<TicketResponse>> assignTechnician(
             @PathVariable Long id,
             @Valid @RequestBody AssignTechnicianRequest request,
-            @AuthenticationPrincipal OAuth2User principal) {
+            Authentication authentication) {
 
-        if (!isAdmin(principal)) {
+        if (!isAdmin(authentication)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Only ADMIN can assign technicians"));
         }
@@ -141,9 +143,9 @@ public class TicketController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> deleteTicket(
             @PathVariable Long id,
-            @AuthenticationPrincipal OAuth2User principal) {
+            Authentication authentication) {
 
-        if (!isAdmin(principal)) {
+        if (!isAdmin(authentication)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Only ADMIN can delete tickets"));
         }
@@ -163,6 +165,7 @@ public class TicketController {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("No files provided"));
         }
+
         TicketResponse response = ticketService.addAttachments(id, files);
         return ResponseEntity.ok(ApiResponse.success("Attachments uploaded", response));
     }
@@ -173,11 +176,13 @@ public class TicketController {
     public ResponseEntity<ApiResponse<CommentResponse>> addComment(
             @PathVariable Long id,
             @Valid @RequestBody AddCommentRequest request,
-            @AuthenticationPrincipal OAuth2User principal) {
+            Authentication authentication) {
 
-        String authorId   = principal.getAttribute("sub");
-        String authorName = principal.getAttribute("name");
+        String authorId = extractUserId(authentication);
+        String authorName = extractUserName(authentication);
+
         CommentResponse response = ticketService.addComment(id, request, authorId, authorName);
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Comment added", response));
@@ -190,9 +195,9 @@ public class TicketController {
             @PathVariable Long id,
             @PathVariable Long commentId,
             @Valid @RequestBody AddCommentRequest request,
-            @AuthenticationPrincipal OAuth2User principal) {
+            Authentication authentication) {
 
-        String requesterId = principal.getAttribute("sub");
+        String requesterId = extractUserId(authentication);
         CommentResponse response = ticketService.updateComment(id, commentId, request, requesterId);
         return ResponseEntity.ok(ApiResponse.success("Comment updated", response));
     }
@@ -203,27 +208,84 @@ public class TicketController {
     public ResponseEntity<ApiResponse<Void>> deleteComment(
             @PathVariable Long id,
             @PathVariable Long commentId,
-            @AuthenticationPrincipal OAuth2User principal) {
+            Authentication authentication) {
 
-        String requesterId = principal.getAttribute("sub");
-        boolean isAdmin    = isAdmin(principal);
+        String requesterId = extractUserId(authentication);
+        boolean isAdmin = isAdmin(authentication);
+
         ticketService.deleteComment(id, commentId, requesterId, isAdmin);
         return ResponseEntity.ok(ApiResponse.success("Comment deleted", null));
     }
 
+    // ── Auth helpers ──────────────────────────────────────────────────────────
+    private String extractUserId(Authentication authentication) {
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw new RuntimeException("Authenticated user not found");
+        }
+
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof OAuth2User oauth2User) {
+            Object sub = oauth2User.getAttribute("sub");
+            if (sub != null) {
+                return sub.toString();
+            }
+        }
+
+        if (principal instanceof UserDetails userDetails) {
+            return userDetails.getUsername();
+        }
+
+        if (principal instanceof String str) {
+            return str;
+        }
+
+        throw new RuntimeException("Unable to resolve authenticated user");
+    }
+
+    private String extractUserName(Authentication authentication) {
+        if (authentication == null || authentication.getPrincipal() == null) {
+            return "Unknown User";
+        }
+
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof OAuth2User oauth2User) {
+            Object name = oauth2User.getAttribute("name");
+            if (name != null) {
+                return name.toString();
+            }
+            Object email = oauth2User.getAttribute("email");
+            if (email != null) {
+                return email.toString();
+            }
+        }
+
+        if (principal instanceof UserDetails userDetails) {
+            return userDetails.getUsername();
+        }
+
+        if (principal instanceof String str) {
+            return str;
+        }
+
+        return "Unknown User";
+    }
+
     // ── Role helpers — check directly from DB ─────────────────────────────────
-    private User.Role getUserRole(OAuth2User principal) {
-        String googleId = principal.getAttribute("sub");
-        return userRepository.findByGoogleId(googleId)
+    private User.Role getUserRole(Authentication authentication) {
+        String userId = extractUserId(authentication);
+
+        return userRepository.findByGoogleId(userId)
                 .map(User::getRole)
                 .orElse(User.Role.USER);
     }
 
-    private boolean isAdmin(OAuth2User principal) {
-        return getUserRole(principal) == User.Role.ADMIN;
+    private boolean isAdmin(Authentication authentication) {
+        return getUserRole(authentication) == User.Role.ADMIN;
     }
 
-    private boolean isTechnician(OAuth2User principal) {
-        return getUserRole(principal) == User.Role.TECHNICIAN;
+    private boolean isTechnician(Authentication authentication) {
+        return getUserRole(authentication) == User.Role.TECHNICIAN;
     }
 }
