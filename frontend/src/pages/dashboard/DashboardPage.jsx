@@ -1,181 +1,271 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getTickets } from '../../api/ticketApi';
-import { useAuth } from '../../context/AuthContext';
-
-const STATUS_CONFIG = {
-  OPEN:        { cls: 'badge-blue',   bar: 'bg-primary-500', label: 'Open' },
-  IN_PROGRESS: { cls: 'badge-yellow', bar: 'bg-warning-400', label: 'In Progress' },
-  RESOLVED:    { cls: 'badge-green',  bar: 'bg-success-500', label: 'Resolved' },
-  CLOSED:      { cls: 'badge-slate',  bar: 'bg-slate-300',   label: 'Closed' },
-  REJECTED:    { cls: 'badge-red',    bar: 'bg-danger-500',  label: 'Rejected' },
-};
-
-const PRIORITY_CONFIG = {
-  CRITICAL: { bar: 'bg-danger-600',  cls: 'priority-critical' },
-  HIGH:     { bar: 'bg-danger-400',  cls: 'priority-high' },
-  MEDIUM:   { bar: 'bg-warning-400', cls: 'priority-medium' },
-  LOW:      { bar: 'bg-slate-300',   cls: 'priority-low' },
-};
+import { resourceApi } from '../../api/resourceApi';
+import { getAllBookings } from '../../api/bookingApi';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
   const [tickets, setTickets] = useState([]);
+  const [resources, setResources] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getTickets({ page: 0, size: 100 })
-      .then(r => setTickets(r.data.data.content || []))
+    Promise.all([
+      getTickets({ page: 0, size: 100 }),
+      resourceApi.getAll(),
+      getAllBookings({ page: 0, size: 100 }),
+    ])
+      .then(([ticketRes, resourceRes, bookingRes]) => {
+        setTickets(ticketRes.data.data.content || []);
+        setResources(resourceRes || []);
+        setBookings(bookingRes.data.data.content || []);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  const total         = tickets.length;
-  const openCount     = tickets.filter(t => t.status === 'OPEN').length;
-  const resolvedCount = tickets.filter(t => ['RESOLVED','CLOSED'].includes(t.status)).length;
-  const resolvedRate  = total > 0 ? Math.round((resolvedCount / total) * 100) : 0;
+  const totalTickets = tickets.length;
+  const openTickets = tickets.filter(t => t.status === 'OPEN').length;
+  const inProgressTickets = tickets.filter(t => t.status === 'IN_PROGRESS').length;
+  const resolvedTickets = tickets.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status)).length;
 
-  const byStatus   = Object.entries(STATUS_CONFIG).map(([s, c]) => ({ ...c, status: s, count: tickets.filter(t => t.status === s).length }));
-  const byPriority = ['CRITICAL','HIGH','MEDIUM','LOW'].map(p => ({ ...PRIORITY_CONFIG[p], priority: p, count: tickets.filter(t => t.priority === p).length }));
-  const byCategory = Object.entries(tickets.reduce((a, t) => { a[t.category] = (a[t.category]||0)+1; return a; }, {})).sort((a,b) => b[1]-a[1]).slice(0, 6);
-  const recent     = [...tickets].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
+  const totalResources = resources.length;
+  const activeResources = resources.filter(r => r.status === 'ACTIVE' || r.status === 'AVAILABLE').length;
+  const maintenanceResources = resources.filter(r =>
+    ['OUT_OF_SERVICE', 'MAINTENANCE'].includes(r.status)
+  ).length;
 
-  if (loading) return (
-    <div className="page-wide">
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        {[...Array(4)].map((_,i) => <div key={i} className="h-28 skeleton" />)}
-      </div>
+  const pendingBookings = bookings.filter(b => b.status === 'PENDING').length;
+  const approvedBookings = bookings.filter(b => b.status === 'APPROVED').length;
+  const rejectedBookings = bookings.filter(b => b.status === 'REJECTED').length;
+
+  const recentTickets = [...tickets]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5);
+
+  const recentBookings = [...bookings]
+    .sort((a, b) => new Date(b.createdAt || b.bookingDate) - new Date(a.createdAt || a.bookingDate))
+    .slice(0, 5);
+
+  const tones = {
+    slate: 'border-slate-200 bg-white text-slate-900',
+    primary: 'border-primary-100 bg-primary-50/70 text-primary-700',
+    accent: 'border-accent-100 bg-accent-50 text-accent-700',
+    success: 'border-success-100 bg-success-50 text-success-700',
+    warning: 'border-warning-100 bg-warning-50 text-warning-600',
+    danger: 'border-danger-100 bg-danger-50 text-danger-700',
+  };
+
+  const StatCard = ({ label, value, tone = 'slate' }) => (
+  <div
+    className={`relative overflow-hidden rounded-2xl border px-6 py-5 shadow-soft transition-all duration-200 hover:shadow-lifted hover:-translate-y-0.5 ${tones[tone]}`}
+  >
+    <div className="absolute inset-0 opacity-40 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
+
+    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+      {label}
+    </p>
+
+    <p className="mt-3 text-3xl font-bold tracking-tight">
+      {value}
+    </p>
+  </div>
+);
+
+ const SummaryCard = ({ title, manageTo, children }) => (
+  <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft transition hover:shadow-card">
+    <div className="mb-4 flex items-center justify-between">
+      <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
+
+      <Link
+        to={manageTo}
+        className="text-xs font-semibold text-primary-600 hover:text-primary-700 transition"
+      >
+        Manage →
+      </Link>
     </div>
-  );
+
+    {children}
+  </div>
+);
+
+  const MiniMetric = ({ label, value, tone = 'slate' }) => (
+  <div
+    className={`rounded-xl border px-4 py-4 transition ${tones[tone]} hover:shadow-soft`}
+  >
+    <p className="text-xs font-medium text-slate-500">{label}</p>
+    <p className="mt-2 text-2xl font-bold">{value}</p>
+  </div>
+);
+
+  const ActionCard = ({ to, title, description }) => (
+  <Link
+    to={to}
+    className="group rounded-xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:border-primary-200 hover:bg-primary-50/40 hover:shadow-card"
+  >
+    <p className="text-sm font-semibold text-slate-900 group-hover:text-primary-700">
+      {title}
+    </p>
+
+    <p className="mt-2 text-xs text-slate-500">
+      {description}
+    </p>
+  </Link>
+);
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-8 bg-slate-50 min-h-screen">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="page-wide">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">Welcome back, {user?.name?.split(' ')[0]}</p>
-        </div>
-        <Link to="/tickets/new" className="btn-primary">New Ticket</Link>
+    <div className="mx-auto max-w-7xl px-4 py-8">
+      {/* Header */}
+      <div className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-600">
+          Admin overview
+        </p>
+        <h1 className="mt-2 text-2xl font-bold text-slate-950">
+          Operations Dashboard
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Monitor tickets, resources, and booking activity across the Smart Campus platform.
+        </p>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: 'Total Tickets',    value: total,           color: 'text-slate-900' },
-          { label: 'Open',             value: openCount,       color: 'text-primary-600' },
-          { label: 'Resolved',         value: resolvedCount,   color: 'text-success-600' },
-          { label: 'Resolution Rate',  value: `${resolvedRate}%`, color: 'text-accent-600' },
-        ].map(s => (
-          <div key={s.label} className="stat-card">
-            <p className="stat-label">{s.label}</p>
-            <p className={`stat-value ${s.color}`}>{s.value}</p>
-          </div>
-        ))}
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <StatCard label="Total Tickets" value={totalTickets} tone="slate" />
+        <StatCard label="Open Tickets" value={openTickets} tone="primary" />
+        <StatCard label="Resources" value={totalResources} tone="accent" />
+        <StatCard label="Pending Bookings" value={pendingBookings} tone="warning" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-        {/* Status breakdown */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Tickets by Status</h3>
-            <span className="badge-slate">{total} total</span>
+      {/* Summaries */}
+      <div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <SummaryCard title="Tickets" manageTo="/admin">
+          <div className="grid grid-cols-3 gap-3">
+            <MiniMetric label="Open" value={openTickets} tone="primary" />
+            <MiniMetric label="Progress" value={inProgressTickets} tone="warning" />
+            <MiniMetric label="Resolved" value={resolvedTickets} tone="success" />
           </div>
-          <div className="space-y-3.5">
-            {byStatus.map(({ status, cls, bar, label, count }) => {
-              const pct = total > 0 ? Math.round((count/total)*100) : 0;
-              return (
-                <div key={status}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className={cls}>{label}</span>
-                    <span className="text-sm font-bold text-slate-700">{count}</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${bar} transition-all duration-700`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
+        </SummaryCard>
+
+        <SummaryCard title="Resources" manageTo="/admin/resources">
+          <div className="grid grid-cols-3 gap-3">
+            <MiniMetric label="Total" value={totalResources} tone="slate" />
+            <MiniMetric label="Active" value={activeResources} tone="accent" />
+            <MiniMetric label="Down" value={maintenanceResources} tone="danger" />
           </div>
+        </SummaryCard>
+
+        <SummaryCard title="Bookings" manageTo="/admin/bookings">
+          <div className="grid grid-cols-3 gap-3">
+            <MiniMetric label="Pending" value={pendingBookings} tone="warning" />
+            <MiniMetric label="Approved" value={approvedBookings} tone="success" />
+            <MiniMetric label="Rejected" value={rejectedBookings} tone="danger" />
+          </div>
+        </SummaryCard>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-soft">
+        <div className="mb-4 border-b border-slate-100 pb-3">
+          <h3 className="text-sm font-bold text-slate-800">Quick Actions</h3>
+          <p className="mt-1 text-xs text-slate-500">Jump directly to the main administrative workflows.</p>
         </div>
 
-        {/* Priority breakdown */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Tickets by Priority</h3>
-            <span className="badge-slate">{total} total</span>
-          </div>
-          <div className="space-y-3.5">
-            {byPriority.map(({ priority, cls, bar, count }) => {
-              const pct = total > 0 ? Math.round((count/total)*100) : 0;
-              return (
-                <div key={priority}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className={cls}>{priority}</span>
-                    <span className="text-sm font-bold text-slate-700">{count}</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${bar} transition-all duration-700`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <ActionCard
+            to="/admin"
+            title="Manage Tickets"
+            description="Review, inspect, and update incident reports."
+          />
+          <ActionCard
+            to="/admin/resources"
+            title="Manage Resources"
+            description="Maintain rooms, labs, venues, and campus assets."
+          />
+          <ActionCard
+            to="/admin/bookings"
+            title="Manage Bookings"
+            description="Approve, reject, and monitor booking requests."
+          />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Top categories */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Top Categories</h3>
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft">
+          <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 className="text-sm font-bold text-slate-800">Recent Tickets</h3>
+            <Link to="/admin" className="text-xs font-semibold text-primary-600 hover:text-primary-700">
+              View all
+            </Link>
           </div>
-          {byCategory.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">
-                <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-              </div>
-              <p className="empty-title">No data yet</p>
-            </div>
+
+          {recentTickets.length === 0 ? (
+            <p className="text-sm text-slate-400">No recent tickets</p>
           ) : (
-            <div className="space-y-1">
-              {byCategory.map(([cat, count], i) => (
-                <div key={cat} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-slate-300 w-5 text-right">{i+1}</span>
-                    <span className="text-sm text-slate-700 font-medium">{cat.replace(/_/g,' ')}</span>
+            <div className="space-y-2">
+              {recentTickets.map(ticket => (
+                <Link
+                  key={ticket.id}
+                  to={`/tickets/${ticket.id}`}
+                  className="flex items-center justify-between rounded-lg border border-slate-100 p-3 transition hover:bg-slate-50"
+                >
+                  <div className="min-w-0 pr-3">
+                    <p className="truncate text-sm font-semibold text-slate-800">{ticket.title}</p>
+                    <p className="text-xs text-slate-400">
+                      {ticket.category?.replace(/_/g, ' ') || 'No category'}
+                    </p>
                   </div>
-                  <span className="badge-slate">{count}</span>
-                </div>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                    {ticket.status}
+                  </span>
+                </Link>
               ))}
             </div>
           )}
         </div>
 
-        {/* Recent tickets */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Recent Tickets</h3>
-            <Link to="/tickets" className="btn-link">View all</Link>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-soft">
+          <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 className="text-sm font-bold text-slate-800">Recent Bookings</h3>
+            <Link to="/admin/bookings" className="text-xs font-semibold text-primary-600 hover:text-primary-700">
+              View all
+            </Link>
           </div>
-          {recent.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">
-                <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-              </div>
-              <p className="empty-title">No tickets yet</p>
-              <p className="empty-subtitle">Submit your first ticket</p>
-            </div>
+
+          {recentBookings.length === 0 ? (
+            <p className="text-sm text-slate-400">No recent bookings</p>
           ) : (
-            <div className="space-y-1">
-              {recent.map(t => (
-                <Link key={t.id} to={`/tickets/${t.id}`}
-                  className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
-                  <div className="flex-1 min-w-0 pr-3">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{t.title}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{new Date(t.createdAt).toLocaleDateString()}</p>
+            <div className="space-y-2">
+              {recentBookings.map(booking => (
+                <div
+                  key={booking.id}
+                  className="flex items-center justify-between rounded-lg border border-slate-100 p-3"
+                >
+                  <div className="min-w-0 pr-3">
+                    <p className="truncate text-sm font-semibold text-slate-800">
+                      Resource #{booking.resourceId}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {booking.bookingDate} · {booking.startTime} - {booking.endTime}
+                    </p>
                   </div>
-                  <span className={STATUS_CONFIG[t.status]?.cls}>{STATUS_CONFIG[t.status]?.label}</span>
-                </Link>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                    {booking.status}
+                  </span>
+                </div>
               ))}
             </div>
           )}

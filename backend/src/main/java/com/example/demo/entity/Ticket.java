@@ -71,7 +71,7 @@ public class Ticket {
     private String rejectionReason;
 
     // Up to 3 image attachment paths stored as comma-separated or via @ElementCollection
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "ticket_attachments", joinColumns = @JoinColumn(name = "ticket_id"))
     @Column(name = "file_path")
     @Size(max = 3, message = "Maximum 3 attachments allowed")
