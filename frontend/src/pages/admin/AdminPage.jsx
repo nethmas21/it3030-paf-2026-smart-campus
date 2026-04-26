@@ -249,11 +249,7 @@ export default function AdminPage() {
 
                   <td className="px-4 py-3">
                     <div className="flex gap-3 text-xs font-medium">
-                      <button
-                        type="button"
-                        onClick={() => openDrawer(ticket)}
-                        className="text-slate-700 hover:text-slate-950"
-                      >
+                      <button type="button" onClick={() => openDrawer('ticket', ticket)} className="text-slate-700 hover:text-slate-950">
                         Inspect
                       </button>
 

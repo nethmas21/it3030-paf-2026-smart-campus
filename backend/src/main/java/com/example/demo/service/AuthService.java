@@ -91,6 +91,13 @@ public class AuthService {
         return userRepository.save(target);
     }
 
+    public void deleteUser(String googleId) {
+        User user = userRepository.findByGoogleId(googleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Target user not found"));
+
+        userRepository.delete(user);
+    }
+
     public User syncOAuthUser(String googleId, String email, String name, String picture) {
         User user = userRepository.findByGoogleId(googleId)
                 .orElseGet(() -> userRepository.findByEmail(email).orElseGet(() -> {

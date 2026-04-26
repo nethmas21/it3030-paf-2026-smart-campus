@@ -22,6 +22,7 @@ import java.util.List;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
+    //Dependencies
     private final UserRepository userRepository;
     private final AuthService authService;
 
@@ -30,6 +31,7 @@ public class AuthController {
         this.authService = authService;
     }
 
+    
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Registration successful", authService.register(request)));
@@ -49,6 +51,7 @@ public class AuthController {
                     .body(ApiResponse.error("Not authenticated"));
         }
 
+        //Get user info from Google
         String googleId = principal.getAttribute("sub");
         String email    = principal.getAttribute("email");
         String name     = principal.getAttribute("name");
@@ -60,7 +63,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(authService.getCurrentUserProfile(user)));
     }
 
-    // Admin can update user role
+    // Admin can UPDATE user role
     @PatchMapping("/users/{googleId}/role")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<String>> updateRole(
@@ -75,5 +78,12 @@ public class AuthController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
         return ResponseEntity.ok(ApiResponse.success(authService.getAllUsers()));
+    }
+
+    @DeleteMapping("/users/{googleId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable String googleId) {
+        authService.deleteUser(googleId);
+        return ResponseEntity.ok(ApiResponse.success("User deleted", null));
     }
 }

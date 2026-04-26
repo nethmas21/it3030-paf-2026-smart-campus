@@ -72,6 +72,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll()
             )
+            //Get user data from Google
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(oauth2UserService())
@@ -94,6 +95,7 @@ public class SecurityConfig {
     public OAuth2UserService<OAuth2UserRequest, OAuth2User> oauth2UserService() {
         DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
 
+        //Get user details from Google
         return request -> {
             OAuth2User oauth2User = delegate.loadUser(request);
 
