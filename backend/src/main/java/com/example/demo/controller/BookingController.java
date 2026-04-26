@@ -75,8 +75,18 @@ public class BookingController {
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<BookingResponse>> getBookingById(@PathVariable Long id) {
-        BookingResponse response = bookingService.getBookingById(id);
+    public ResponseEntity<ApiResponse<BookingResponse>> getBookingById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal OAuth2User principal
+    ) {
+        String userId = principal.getAttribute("sub");
+
+        User user = userRepository.findByGoogleId(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        boolean isAdmin = user.getRole() == User.Role.ADMIN;
+
+        BookingResponse response = bookingService.getBookingById(id, userId, isAdmin);
         return ResponseEntity.ok(ApiResponse.success("Booking fetched successfully", response));
     }
 
