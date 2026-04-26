@@ -27,6 +27,7 @@ import DashboardPage from './pages/dashboard/DashboardPage';
 import UserDashboard from './pages/dashboard/userdash';
 import AdminPage from './pages/admin/AdminPage';
 import logo from './assets/logo.png';
+import UserManagementPage from './pages/admin/UserManagementPage';
 
 function LoadingScreen() {
   return (
@@ -296,6 +297,10 @@ function Navbar() {
                     Manage Bookings
                   </a>
 
+                  <a href="/admin/users" className={adminLink('/admin/users')}>
+                  Manage Users
+                  </a>
+
                 </div>
               )}
 
@@ -486,6 +491,18 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* ADMIN USERS (ADD THIS BELOW) */}
+<Route
+  path="/admin/users"
+  element={
+    <ProtectedRoute allowedRoles={['ADMIN']}>
+      <AppLayout>
+        <UserManagementPage />
+      </AppLayout>
+    </ProtectedRoute>
+  }
+/>
 
         </Routes>
       </BrowserRouter>
