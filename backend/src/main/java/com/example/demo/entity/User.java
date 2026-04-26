@@ -51,6 +51,7 @@ public class User {
 
     public User() {}
 
+    //Getters & Setters
     public String getGoogleId() { return googleId; }
     public void setGoogleId(String googleId) { this.googleId = googleId; }
 

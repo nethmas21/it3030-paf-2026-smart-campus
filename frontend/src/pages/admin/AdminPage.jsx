@@ -517,9 +517,30 @@ export default function AdminPage() {
                     </select>
                   </td>
                   <td className="px-4 py-3">
-                    <button type="button" onClick={() => openDrawer('user', account)} className="text-xs font-medium text-slate-700 hover:text-slate-950">
-                      Inspect
-                    </button>
+                    <div className="flex gap-3">
+                      <button type="button" onClick={() => openDrawer('user', account)} className="text-xs font-medium text-slate-700 hover:text-slate-950">
+                        Inspect
+                      </button>
+                      {account.googleId !== user?.id ? (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.confirm(`Delete user ${account.name} (${account.email})?`)) return;
+                            try {
+                              await apiClient.delete(`/auth/users/${account.googleId}`);
+                              setUsers((current) => current.filter((u) => u.googleId !== account.googleId));
+                            } catch (err) {
+                              alert(err?.response?.data?.message || 'Failed to delete user');
+                            }
+                          }}
+                          className="text-xs font-medium text-red-700 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-400">You</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
