@@ -38,8 +38,8 @@ public class ResourceRequestDTO {
         regexp = "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^$",
         message = "Availability format must be HH:MM-HH:MM (e.g. 08:00-18:00)"
     )
-
     private String availabilityWindows;
+    
     private ResourceStatus status;
 
     @Size(max = 500, message = "Description cannot exceed 500 characters")
