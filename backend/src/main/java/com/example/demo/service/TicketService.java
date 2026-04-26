@@ -240,7 +240,7 @@ public class TicketService {
             String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
             Path filePath = dirPath.resolve(fileName);
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            return filePath.toString();
+            return fileName;
         } catch (IOException e) {
             throw new BadRequestException("Failed to save file: " + e.getMessage());
         }

@@ -198,7 +198,7 @@ export default function TicketDetailPage() {
               {ticket.attachmentPaths.map((path, i) => (
                 <div key={i}>
                   <img
-                    src={`http://localhost:8081/uploads/${path}`}
+                    src={`http://localhost:8081/api/v1/files/${ticket.id}/${path}`}
                     alt={`Attachment ${i + 1}`}
                     className="w-24 h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90"
                     onError={(e) => {
@@ -207,7 +207,7 @@ export default function TicketDetailPage() {
                     }}
                   />
                   <a
-                    href={`http://localhost:8081/uploads/${path}`}
+                   href={`http://localhost:8081/api/v1/files/${ticket.id}/${path}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ display: 'none' }}
