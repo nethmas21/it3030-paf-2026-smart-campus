@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -137,23 +138,34 @@ public class TicketService {
     // ── Attachments ───────────────────────────────────────────────────────────
 
     public TicketResponse addAttachments(Long id, List<MultipartFile> files) {
-        Ticket ticket = findTicket(id);
+    Ticket ticket = findTicket(id);
 
-        int currentCount = ticket.getAttachmentPaths().size();
-        if (currentCount + files.size() > 3) {
-            throw new BadRequestException(
-                    "Cannot add " + files.size() + " attachment(s). Maximum 3 allowed. " +
-                    "Ticket already has " + currentCount + ".");
-        }
-
-        for (MultipartFile file : files) {
-            validateFile(file);
-            String savedPath = saveFile(file, id);
-            ticket.getAttachmentPaths().add(savedPath);
-        }
-
-        return toResponse(ticketRepository.save(ticket));
+    if (ticket.getAttachmentPaths() == null) {
+        ticket.setAttachmentPaths(new ArrayList<>());
     }
+
+    int currentCount = ticket.getAttachmentPaths().size();
+
+    if (currentCount + files.size() > 3) {
+        throw new BadRequestException("Maximum 3 attachments allowed");
+    }
+
+    for (MultipartFile file : files) {
+        validateFile(file);
+
+        String savedPath = saveFile(file, id);
+
+        if (savedPath == null) {
+            throw new BadRequestException("File saving failed");
+        }
+
+        ticket.getAttachmentPaths().add(savedPath);
+    }
+
+    Ticket saved = ticketRepository.saveAndFlush(ticket);
+
+    return toResponse(saved);
+}
 
     // ── Comments ──────────────────────────────────────────────────────────────
 
@@ -252,8 +264,16 @@ public class TicketService {
         r.setAssignedTechnicianName(t.getAssignedTechnicianName());
         r.setResolutionNotes(t.getResolutionNotes());
         r.setRejectionReason(t.getRejectionReason());
-        r.setAttachmentPaths(t.getAttachmentPaths());
-        r.setComments(t.getComments().stream().map(this::toCommentResponse).collect(Collectors.toList()));
+        r.setAttachmentPaths(
+    t.getAttachmentPaths() != null
+        ? t.getAttachmentPaths()
+        : new java.util.ArrayList<>()
+);
+        r.setComments(
+         t.getComments() != null
+        ? t.getComments().stream().map(this::toCommentResponse).collect(Collectors.toList())
+        : new java.util.ArrayList<>()
+        );
         r.setCreatedAt(t.getCreatedAt());
         r.setUpdatedAt(t.getUpdatedAt());
         r.setResolvedAt(t.getResolvedAt());

@@ -353,71 +353,140 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+
+          {/* PUBLIC ROUTES */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
 
+          {/* DEFAULT → LOGIN */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+
+          {/* DASHBOARD */}
           <Route
-            path="/*"
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <AppLayout>
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={<DashboardRouter />} />
-
-                    <Route path="/tickets" element={<TicketListPage />} />
-                    <Route
-                      path="/tickets/new"
-                      element={
-                        <ProtectedRoute allowedRoles={['USER', 'ADMIN']}>
-                          <CreateTicketPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route path="/tickets/:id" element={<TicketDetailPage />} />
-
-                    <Route path="/resources" element={<ResourceListPage />} />
-                    <Route path="/resources/:id" element={<ResourceDetailPage />} />
-                    <Route
-                      path="/admin/resources"
-                      element={
-                        <ProtectedRoute allowedRoles={['ADMIN']}>
-                          <AdminResourcePage />
-                        </ProtectedRoute>
-                      }
-                    />
-
-                    <Route
-                      path="/bookings/new"
-                      element={
-                        <ProtectedRoute allowedRoles={['USER', 'ADMIN']}>
-                          <CreateBookingPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route path="/bookings/my" element={<MyBookingsPage />} />
-                    <Route
-                      path="/admin/bookings"
-                      element={
-                        <ProtectedRoute allowedRoles={['ADMIN']}>
-                          <AdminBookingsPage />
-                        </ProtectedRoute>
-                      }
-                    />
-
-                    <Route
-                      path="/admin"
-                      element={
-                        <ProtectedRoute allowedRoles={['ADMIN']}>
-                          <AdminPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                  </Routes>
+                  <DashboardRouter />
                 </AppLayout>
               </ProtectedRoute>
             }
           />
+
+          {/* TICKETS */}
+          <Route
+            path="/tickets"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <TicketListPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/tickets/new"
+            element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN']}>
+                <AppLayout>
+                  <CreateTicketPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/tickets/:id"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <TicketDetailPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* RESOURCES */}
+          <Route
+            path="/resources"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ResourceListPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/resources/:id"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ResourceDetailPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/resources"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AppLayout>
+                  <AdminResourcePage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* BOOKINGS */}
+          <Route
+            path="/bookings/new"
+            element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN']}>
+                <AppLayout>
+                  <CreateBookingPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/bookings/my"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <MyBookingsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/bookings"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AppLayout>
+                  <AdminBookingsPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ADMIN */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AppLayout>
+                  <AdminPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
         </Routes>
       </BrowserRouter>
     </AuthProvider>
