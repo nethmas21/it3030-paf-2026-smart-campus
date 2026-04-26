@@ -4,15 +4,19 @@ import com.example.demo.dto.request.BookingDecisionRequest;
 import com.example.demo.dto.request.CreateBookingRequest;
 import com.example.demo.dto.response.BookingResponse;
 import com.example.demo.entity.Booking;
+import com.example.demo.entity.Resource;
 import com.example.demo.enums.BookingStatus;
+import com.example.demo.enums.ResourceStatus;
 import com.example.demo.exception.BadRequestException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.BookingRepository;
+import com.example.demo.repository.ResourceRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Service
@@ -20,16 +24,32 @@ import java.time.LocalTime;
 public class BookingService {
 
     private final BookingRepository bookingRepository;
+    private final ResourceRepository resourceRepository;
 
-    public BookingService(BookingRepository bookingRepository) {
+    public BookingService(BookingRepository bookingRepository, ResourceRepository resourceRepository) {
         this.bookingRepository = bookingRepository;
+        this.resourceRepository = resourceRepository;
     }
 
     public BookingResponse createBooking(CreateBookingRequest request, String userId) {
         validateTimeRange(request.getStartTime(), request.getEndTime());
+        validateBookingDate(request.getBookingDate());
+
+        Resource resource = validateResourceForBooking(request.getResourceId());
+
+        boolean conflict = bookingRepository.existsApprovedConflict(
+                resource.getId(),
+                request.getBookingDate(),
+                request.getStartTime(),
+                request.getEndTime()
+        );
+
+        if (conflict) {
+            throw new BadRequestException("This resource is already booked for the selected date and time range");
+        }
 
         Booking booking = new Booking();
-        booking.setResourceId(request.getResourceId());
+        booking.setResourceId(resource.getId());
         booking.setBookingDate(request.getBookingDate());
         booking.setStartTime(request.getStartTime());
         booking.setEndTime(request.getEndTime());
@@ -56,8 +76,14 @@ public class BookingService {
                 .map(this::toResponse);
     }
 
-    public BookingResponse getBookingById(Long id) {
-        return toResponse(findBooking(id));
+    public BookingResponse getBookingById(Long id, String userId, boolean isAdmin) {
+        Booking booking = findBooking(id);
+
+        if (!isAdmin && !booking.getRequestedBy().equals(userId)) {
+            throw new BadRequestException("You can only view your own bookings");
+        }
+
+        return toResponse(booking);
     }
 
     public BookingResponse approveBooking(Long id, BookingDecisionRequest request) {
@@ -67,8 +93,10 @@ public class BookingService {
             throw new BadRequestException("Only pending bookings can be approved");
         }
 
+        Resource resource = validateResourceForBooking(booking.getResourceId());
+
         boolean conflict = bookingRepository.existsApprovedConflict(
-                booking.getResourceId(),
+                resource.getId(),
                 booking.getBookingDate(),
                 booking.getStartTime(),
                 booking.getEndTime()
@@ -79,6 +107,7 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.APPROVED);
+
         if (request != null) {
             booking.setDecisionReason(request.getReason());
         }
@@ -94,6 +123,7 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.REJECTED);
+
         if (request != null) {
             booking.setDecisionReason(request.getReason());
         }
@@ -120,6 +150,31 @@ public class BookingService {
     private Booking findBooking(Long id) {
         return bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + id));
+    }
+
+    private Resource validateResourceForBooking(Long resourceId) {
+        if (resourceId == null) {
+            throw new BadRequestException("Resource ID is required");
+        }
+
+        Resource resource = resourceRepository.findById(resourceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + resourceId));
+
+        if (resource.getStatus() != ResourceStatus.ACTIVE) {
+            throw new BadRequestException("This resource is not available for booking because it is out of service");
+        }
+
+        return resource;
+    }
+
+    private void validateBookingDate(LocalDate bookingDate) {
+        if (bookingDate == null) {
+            throw new BadRequestException("Booking date is required");
+        }
+
+        if (bookingDate.isBefore(LocalDate.now())) {
+            throw new BadRequestException("Booking date cannot be in the past");
+        }
     }
 
     private void validateTimeRange(LocalTime startTime, LocalTime endTime) {
